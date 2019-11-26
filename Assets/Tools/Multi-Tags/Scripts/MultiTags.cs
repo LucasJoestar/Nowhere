@@ -68,7 +68,7 @@ public static class MultiTags
     /// <summary>
     /// Path of the scriptable object from the resources folder, containing all tags of the project.
     /// </summary>
-    public const string                 TAGS_ASSET_PATH             = "Tags/TagsAsset";
+    public const string                 TAGS_ASSET_PATH             = "TagsAsset";
 
 
     /// <summary>
