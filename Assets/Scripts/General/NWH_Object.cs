@@ -1,8 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
-public class NWH_Player : MonoBehaviour
+public class NWH_Object : MonoBehaviour
 {
 	#region Fields / Properties
 	
