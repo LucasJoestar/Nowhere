@@ -132,11 +132,11 @@ public class NWH_Movable : MonoBehaviour
     }
 
     /// <summary>
-    /// IEnumerator linked to the <see cref="MoveTo(Vector3)"/> method.
+    /// IEnumerator linked to the <see cref="MoveTo(Vector2)"/> method.
     /// </summary>
     /// <param name="_to">Aimed position.</param>
     /// <returns>IEnumerator, baby.</returns>
-    private IEnumerator DoMoveTo(Vector3 _to)
+    private IEnumerator DoMoveTo(Vector2 _to)
     {
         doMoveToCoroutine = null;
         yield break;
@@ -175,7 +175,7 @@ public class NWH_Movable : MonoBehaviour
     /// </summary>
     /// <param name="_dir">Direction to move to.</param>
     /// <returns>Returns true if hit something during travel, false otherwise.</returns>
-    public bool MoveInDirection(Vector3 _dir)
+    public bool MoveInDirection(Vector2 _dir)
     {
         return false;
     }
@@ -184,7 +184,7 @@ public class NWH_Movable : MonoBehaviour
     /// Makes the object move to a specified position.
     /// </summary>
     /// <param name="_to">Aimed position.</param>
-    public void MoveTo(Vector3 _to)
+    public void MoveTo(Vector2 _to)
     {
         if (doMoveToCoroutine != null) StopCoroutine(doMoveToCoroutine);
         doMoveToCoroutine = StartCoroutine(DoMoveTo(_to));
