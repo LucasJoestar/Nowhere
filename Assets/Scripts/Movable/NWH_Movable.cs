@@ -27,7 +27,7 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Physics collider of the object.
     /// </summary>
-    [SerializeField] private new Collider   collider =          null;
+    [SerializeField] private new Collider2D collider =          null;
 
 
     /// <summary>
@@ -138,6 +138,13 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>IEnumerator, baby.</returns>
     private IEnumerator DoMoveTo(Vector2 _to)
     {
+        while ((Mathf.Abs(transform.position.x - _to.x) > .01f) && (Mathf.Abs(transform.position.y - _to.y) > .01f))
+        {
+            yield return new WaitForFixedUpdate();
+            MoveInDirection(_to - (Vector2)transform.position);
+        }
+
+        Debug.Log("Reached Destination");
         doMoveToCoroutine = null;
         yield break;
     }
@@ -177,7 +184,12 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>Returns true if hit something during travel, false otherwise.</returns>
     public bool MoveInDirection(Vector2 _dir)
     {
-        return false;
+        _dir = _dir.normalized * Mathf.Min(_dir.magnitude, speed);
+
+        bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _dir, obstacleLayers);
+        transform.position += (Vector3)_dir;
+
+        return _doHit;
     }
 
     /// <summary>
@@ -195,15 +207,43 @@ public class NWH_Movable : MonoBehaviour
     // Awake is called when the script instance is being loaded
     private void Awake()
 	{
-		
-	}
-	
+
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (!NWH_GameManager.I || NWH_GameManager.I.Settings.RaycastPrecision < .1f) return;
+
+        Gizmos.color = Color.blue;
+
+        Vector2 _firstPos = new Vector2(collider.bounds.center.x + collider.bounds.extents.x, collider.bounds.center.y - collider.bounds.extents.y);
+        float _precision = collider.bounds.size.y / ((int)(collider.bounds.size.y / NWH_GameManager.I.Settings.RaycastPrecision));
+
+        for (float _i = collider.bounds.size.y; _i > -.001f; _i -= _precision)
+        {
+            Gizmos.DrawSphere(new Vector2(_firstPos.x, _firstPos.y + _i), NWH_GameManager.I.Settings.RaycastPrecision / 2f);
+        }
+
+        _firstPos = new Vector2(collider.bounds.center.x - collider.bounds.extents.x, collider.bounds.center.y + collider.bounds.extents.y);
+        _precision = collider.bounds.size.x / ((int)(collider.bounds.size.x / NWH_GameManager.I.Settings.RaycastPrecision));
+
+        for (float _i = collider.bounds.size.x; _i > -.001f; _i -= _precision)
+        {
+            Gizmos.DrawSphere(new Vector2(_firstPos.x + _i, _firstPos.y), NWH_GameManager.I.Settings.RaycastPrecision / 2f);
+        }
+    }
+
     // Start is called before the first frame update
     private void Start()
     {
-        
+        //MoveTo(transform.position + Vector3.one * 5);
     }
-	#endregion
-	
-	#endregion
+
+    private void FixedUpdate()
+    {
+        //MoveInDirection(new Vector2(Input.GetAxis("Horizontal"), 0));
+    }
+    #endregion
+
+    #endregion
 }
