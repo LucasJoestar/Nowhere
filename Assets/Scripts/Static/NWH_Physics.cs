@@ -55,10 +55,5 @@ public static class NWH_Physics
 
         return _isObstacle;
     }
-
-    public static bool RaycastCircle(CircleCollider2D _collider, ref Vector2 _movement, LayerMask _obstacles)
-    {
-        return false;
-    }
     #endregion
 }

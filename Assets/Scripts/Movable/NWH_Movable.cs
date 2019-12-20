@@ -5,6 +5,18 @@ public class NWH_Movable : MonoBehaviour
 {
     #region Fields / Properties
 
+    #region Constants
+    /// <summary>
+    /// Stop movement in <see cref="DoMoveTo(Vector2)"/> coroutine if not moving from this value amount of time (in seconds).
+    /// </summary>
+    private const float     BLOCKED_TIMER_LIMIT =   2;
+
+    /// <summary>
+    /// Velocity Y minimum value.
+    /// </summary>
+    private const float     VELOCITY_Y_MIN_VALUE =  -50;
+    #endregion
+
     #region Parameters
     /**********************************
      *********     FIELDS     *********
@@ -12,43 +24,49 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>Backing field for <see cref="IsFacingRightSide"/>.</summary>
-    [SerializeField] private bool           isFacingRight =     true;
+    [SerializeField] protected bool                 isFacingRight =     true;
 
     /// <summary>Backing field for <see cref="IsMoving"/>.</summary>
-    [SerializeField] private bool           isMoving =          false;
+    [SerializeField] protected bool                 isMoving =          false;
 
     /// <summary>Backing field for <see cref="IsOnGround"/>.</summary>
-    [SerializeField] private bool           isOnGround =        false;
+    [SerializeField] protected bool                 isOnGround =        false;
 
     /// <summary>Backing field for <see cref="UseGravity"/>.</summary>
-    [SerializeField] private bool           useGravity =        true;
-
-
-    /// <summary>
-    /// Physics collider of the object.
-    /// </summary>
-    [SerializeField] private new Collider2D collider =          null;
+    [SerializeField] protected bool                 useGravity =        true;
 
 
     /// <summary>
     /// Movement speed of the object.
     /// </summary>
-    [SerializeField] private float          speed =             1;
+    [SerializeField] protected float                speed =             1;
 
     /// <summary>
     /// Weight of the object (Influence gravity force).
     /// </summary>
-    [SerializeField] private float          weight =            1;
+    [SerializeField] protected float                weight =            1;
+
+
+    /// <summary>
+    /// Physics collider of the object.
+    /// </summary>
+    [SerializeField] protected new Collider2D       collider =          null;
+
+    /// <summary>
+    /// Rigidbody of the object.
+    /// This should only be used by moving its position to update the collider one.
+    /// </summary>
+    [SerializeField] protected new Rigidbody2D      rigidbody =         null;
 
 
     /// <summary>
     /// Layers obstacles to this object.
     /// </summary>
-    [SerializeField] private LayerMask      obstacleLayers =    new LayerMask();
+    [SerializeField] protected LayerMask            obstacleLayers =    new LayerMask();
 
 
     /// <summary>Backing field for <see cref="Velocity"/>.</summary>
-    [SerializeField] private Vector2        velocity =          Vector2.zero;
+    [SerializeField] protected Vector2              velocity =          Vector2.zero;
 
 
     /**********************************
@@ -98,17 +116,17 @@ public class NWH_Movable : MonoBehaviour
         set
         {
             velocity = value;
-            if (applyVelocityCoroutine != null) applyVelocityCoroutine = StartCoroutine(ApplyVelocity());
+            if ((value != Vector2.zero) && (applyVelocityCoroutine == null)) applyVelocityCoroutine = StartCoroutine(ApplyVelocity());
         }
     }
     #endregion
 
     #region Coroutines & Memory
     /// <summary>Stored coroutine of the <see cref="ApplyVelocity"/> method.</summary>
-    private Coroutine   applyVelocityCoroutine =   null;
+    protected Coroutine   applyVelocityCoroutine =    null;
 
     /// <summary>Stored coroutine of the <see cref="DoMoveTo"/> method.</summary>
-    private Coroutine   doMoveToCoroutine =     null;
+    protected Coroutine   doMoveToCoroutine =         null;
     #endregion
 
     #endregion
@@ -125,8 +143,52 @@ public class NWH_Movable : MonoBehaviour
     /// Apply velocity to the object movement.
     /// </summary>
     /// <returns></returns>
-    private IEnumerator ApplyVelocity()
+    protected virtual IEnumerator ApplyVelocity()
     {
+        while (velocity != Vector2.zero)
+        {
+            Vector2 _movement = velocity * Time.deltaTime;
+            DoPerformMovement(ref _movement);
+
+            if (velocity.x != 0)
+            {
+                if (_movement.x == 0) velocity.x = 0;
+                else
+                {
+                    velocity.x *= .975f;
+                    if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
+                }
+            }
+
+            if (velocity.y != 0)
+            {
+                if (_movement.y == 0)
+                {
+                    if (velocity.y > 0) velocity.y *= -.75f;
+                    else velocity.y = 0;
+                }
+                else
+                {
+                    if (velocity.y > 0)
+                    {
+                        velocity.y *= .925f;
+
+                        if (velocity.y < .2f) velocity.y *= -1;
+                    }
+                    else
+                    {
+                        if (velocity.y < VELOCITY_Y_MIN_VALUE) velocity.y = VELOCITY_Y_MIN_VALUE;
+                        else if (velocity.y > VELOCITY_Y_MIN_VALUE)
+                        {
+                            velocity.y *= velocity.y > -1.5f ? 1.1f : 1.05f;
+                        }
+                    }
+                }
+            }
+
+            yield return null;
+        }
+
         applyVelocityCoroutine = null;
         yield break;
     }
@@ -136,15 +198,22 @@ public class NWH_Movable : MonoBehaviour
     /// </summary>
     /// <param name="_to">Aimed position.</param>
     /// <returns>IEnumerator, baby.</returns>
-    private IEnumerator DoMoveTo(Vector2 _to)
+    protected virtual IEnumerator DoMoveTo(Vector2 _to)
     {
-        while ((Mathf.Abs(transform.position.x - _to.x) > .01f) && (Mathf.Abs(transform.position.y - _to.y) > .01f))
+        float _blockedTimer = 0;
+
+        while ((Mathf.Abs(transform.position.x - _to.x) > .01f) || (Mathf.Abs(transform.position.y - _to.y) > .01f))
         {
-            yield return new WaitForFixedUpdate();
-            MoveInDirection(_to - (Vector2)transform.position);
+            yield return null;
+
+            if (!PerformMovement(_to - (Vector2)transform.position))
+            {
+                _blockedTimer += Time.deltaTime;
+                if (_blockedTimer > BLOCKED_TIMER_LIMIT) break;
+            }
+            else if (_blockedTimer > 0) _blockedTimer = 0;
         }
 
-        Debug.Log("Reached Destination");
         doMoveToCoroutine = null;
         yield break;
     }
@@ -158,7 +227,7 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Makes the object flip.
     /// </summary>
-    private void Flip()
+    protected virtual void Flip()
     {
         isFacingRight = !isFacingRight;
         transform.localScale = new Vector3(transform.localScale.x * -1, transform.localScale.y, transform.localScale.z);
@@ -169,7 +238,7 @@ public class NWH_Movable : MonoBehaviour
     /// </summary>
     /// <param name="_doFaceRight">Should the object face the right side of screen or not.</param>
     /// <returns>Returns true if the object flipped, false if was already looking indicated side.</returns>
-    public bool Flip(bool _doFaceRight)
+    public virtual bool Flip(bool _doFaceRight)
     {
         if (isFacingRight == _doFaceRight) return false;
 
@@ -177,19 +246,15 @@ public class NWH_Movable : MonoBehaviour
         return true;
     }
 
+
     /// <summary>
     /// Makes the object move in a given direction.
     /// </summary>
     /// <param name="_dir">Direction to move to.</param>
-    /// <returns>Returns true if hit something during travel, false otherwise.</returns>
-    public bool MoveInDirection(Vector2 _dir)
+    /// <returns>Returns true if position changed, false otherwise.</returns>
+    public virtual bool MoveInDirection(Vector2 _dir)
     {
-        _dir = _dir.normalized * Mathf.Min(_dir.magnitude, speed);
-
-        bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _dir, obstacleLayers);
-        transform.position += (Vector3)_dir;
-
-        return _doHit;
+        return DoPerformMovement(_dir.normalized * speed);
     }
 
     /// <summary>
@@ -201,13 +266,55 @@ public class NWH_Movable : MonoBehaviour
         if (doMoveToCoroutine != null) StopCoroutine(doMoveToCoroutine);
         doMoveToCoroutine = StartCoroutine(DoMoveTo(_to));
     }
+
+    /// <summary>
+    /// Makes the object perform a given movement, limited by its speed.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    /// <returns>Returns true if position changed, false otherwise.</returns>
+    public virtual bool PerformMovement(Vector2 _movement)
+    {
+        _movement = _movement.normalized * Mathf.Min(_movement.magnitude, speed);
+        return DoPerformMovement(_movement);
+    }
+
+
+    /// <summary>
+    /// Makes the object perform a given movement.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    /// <returns>Returns true if position changed, false otherwise.</returns>
+    protected virtual bool DoPerformMovement(Vector2 _movement)
+    {
+        return DoPerformMovement(ref _movement);
+    }
+
+    /// <summary>
+    /// Makes the object perform a given movement.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    /// <returns>Returns true if position changed, false otherwise.</returns>
+    protected virtual bool DoPerformMovement(ref Vector2 _movement)
+    {
+        bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _movement, obstacleLayers);
+
+        if (_movement == Vector2.zero) return false;
+
+        transform.position = (Vector2)transform.position + _movement;
+        rigidbody.position += _movement;
+
+        return true;
+    }
     #endregion
 
     #region Unity Methods
     // Awake is called when the script instance is being loaded
-    private void Awake()
+    protected virtual void Awake()
 	{
-
+        #if UNITY_EDITOR
+        if (!collider) Debug.LogError($"Missing Collider on \"{name}\" !");
+        if (!rigidbody) Debug.LogError($"Missing Rigidbody on \"{name}\" !");
+        #endif
     }
 
     private void OnDrawGizmos()
@@ -234,14 +341,14 @@ public class NWH_Movable : MonoBehaviour
     }
 
     // Start is called before the first frame update
-    private void Start()
+    protected virtual void Start()
     {
-        //MoveTo(transform.position + Vector3.one * 5);
+        Velocity += new Vector2(0, 25);
     }
 
-    private void FixedUpdate()
+    protected virtual void Update()
     {
-        //MoveInDirection(new Vector2(Input.GetAxis("Horizontal"), 0));
+        MoveInDirection(new Vector2(Input.GetAxis("Horizontal"), 0));
     }
     #endregion
 
