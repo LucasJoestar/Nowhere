@@ -7,14 +7,9 @@ public class NWH_Movable : MonoBehaviour
 
     #region Constants
     /// <summary>
-    /// Stop movement in <see cref="DoMoveTo(Vector2)"/> coroutine if not moving from this value amount of time (in seconds).
-    /// </summary>
-    private const float     BLOCKED_TIMER_LIMIT =   2;
-
-    /// <summary>
     /// Velocity Y minimum value.
     /// </summary>
-    private const float     VELOCITY_Y_MIN_VALUE =  -50;
+    private const float     FALLING_MAX_VELOCITY =  -25;
     #endregion
 
     #region Parameters
@@ -41,11 +36,6 @@ public class NWH_Movable : MonoBehaviour
     /// </summary>
     [SerializeField] protected float                speed =             1;
 
-    /// <summary>
-    /// Weight of the object (Influence gravity force).
-    /// </summary>
-    [SerializeField] protected float                weight =            1;
-
 
     /// <summary>
     /// Physics collider of the object.
@@ -53,7 +43,7 @@ public class NWH_Movable : MonoBehaviour
     [SerializeField] protected new Collider2D       collider =          null;
 
     /// <summary>
-    /// Rigidbody of the object.
+    /// Rigidbody of the object (should be Kinematic).
     /// This should only be used by moving its position to update the collider one.
     /// </summary>
     [SerializeField] protected new Rigidbody2D      rigidbody =         null;
@@ -96,6 +86,11 @@ public class NWH_Movable : MonoBehaviour
     public bool     IsOnGround
     {
         get { return isOnGround; }
+        private set
+        {
+            isOnGround = value;
+            if (!value && (velocity.y == 0)) Velocity = new Vector2(velocity.x, -2.5f);
+        }
     }
 
     /// <summary>
@@ -104,6 +99,19 @@ public class NWH_Movable : MonoBehaviour
     public bool     UseGravity
     {
         get { return useGravity; }
+        set
+        {
+            useGravity = value;
+            if (value)
+            {
+                if (checkOnGroundCoroutine == null) checkOnGroundCoroutine = StartCoroutine(CheckOnGround());
+            }
+            else if (checkOnGroundCoroutine != null)
+            {
+                StopCoroutine(checkOnGroundCoroutine);
+                checkOnGroundCoroutine = null;
+            }
+        }
     }
 
 
@@ -123,10 +131,13 @@ public class NWH_Movable : MonoBehaviour
 
     #region Coroutines & Memory
     /// <summary>Stored coroutine of the <see cref="ApplyVelocity"/> method.</summary>
-    protected Coroutine   applyVelocityCoroutine =    null;
+    protected Coroutine     applyVelocityCoroutine =      null;
+
+    /// <summary>Stored coroutine of the <see cref="CheckOnGround"/> method.</summary>
+    protected Coroutine     checkOnGroundCoroutine =    null;
 
     /// <summary>Stored coroutine of the <see cref="DoMoveTo"/> method.</summary>
-    protected Coroutine   doMoveToCoroutine =         null;
+    protected Coroutine     doMoveToCoroutine =           null;
     #endregion
 
     #endregion
@@ -175,13 +186,9 @@ public class NWH_Movable : MonoBehaviour
 
                         if (velocity.y < .2f) velocity.y *= -1;
                     }
-                    else
+                    else if (velocity.y > FALLING_MAX_VELOCITY)
                     {
-                        if (velocity.y < VELOCITY_Y_MIN_VALUE) velocity.y = VELOCITY_Y_MIN_VALUE;
-                        else if (velocity.y > VELOCITY_Y_MIN_VALUE)
-                        {
-                            velocity.y *= velocity.y > -1.5f ? 1.1f : 1.05f;
-                        }
+                        velocity.y = Mathf.Max(FALLING_MAX_VELOCITY, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
                     }
                 }
             }
@@ -190,7 +197,21 @@ public class NWH_Movable : MonoBehaviour
         }
 
         applyVelocityCoroutine = null;
-        yield break;
+    }
+
+    /// <summary>
+    /// Checks if the object is touching ground or not.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual IEnumerator CheckOnGround()
+    {
+        while (true)
+        {
+            RaycastHit2D[] _hit = new RaycastHit2D[1];
+            if ((collider.Cast(new Vector2(0, -.1f), _hit, .1f) > 0) != isOnGround) IsOnGround = !isOnGround;
+
+            yield return null;
+        }
     }
 
     /// <summary>
@@ -200,22 +221,17 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>IEnumerator, baby.</returns>
     protected virtual IEnumerator DoMoveTo(Vector2 _to)
     {
-        float _blockedTimer = 0;
+        isMoving = true;
 
         while ((Mathf.Abs(transform.position.x - _to.x) > .01f) || (Mathf.Abs(transform.position.y - _to.y) > .01f))
         {
             yield return null;
 
-            if (!PerformMovement(_to - (Vector2)transform.position))
-            {
-                _blockedTimer += Time.deltaTime;
-                if (_blockedTimer > BLOCKED_TIMER_LIMIT) break;
-            }
-            else if (_blockedTimer > 0) _blockedTimer = 0;
+            if (!PerformMovement(_to - (Vector2)transform.position)) break;
         }
 
         doMoveToCoroutine = null;
-        yield break;
+        isMoving = false;
     }
 
 
@@ -296,7 +312,18 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>Returns true if position changed, false otherwise.</returns>
     protected virtual bool DoPerformMovement(ref Vector2 _movement)
     {
-        bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _movement, obstacleLayers);
+        RaycastHit2D[] _hit = new RaycastHit2D[1];
+        if (collider.Cast(new Vector2(_movement.x, 0), _hit, Mathf.Abs(_movement.x)) > 0)
+        {
+            //Debug.Log(_hit[0].collider.name + " | " + _hit[0].distance);
+            _movement.x = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.x);
+        }
+        if (collider.Cast(new Vector2(0, _movement.y), _hit, Mathf.Abs(_movement.y)) > 0)
+        {
+            _movement.y = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.y);
+        }
+
+        //bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _movement, obstacleLayers);
 
         if (_movement == Vector2.zero) return false;
 
@@ -304,6 +331,21 @@ public class NWH_Movable : MonoBehaviour
         rigidbody.position += _movement;
 
         return true;
+    }
+
+
+    /// <summary>
+    /// Stops the object from moving.
+    /// </summary>
+    public void StopMoving()
+    {
+        if (doMoveToCoroutine != null)
+        {
+            StopCoroutine(doMoveToCoroutine);
+            doMoveToCoroutine = null;
+
+            isMoving = false;
+        }
     }
     #endregion
 
@@ -321,7 +363,7 @@ public class NWH_Movable : MonoBehaviour
     {
         if (!NWH_GameManager.I || NWH_GameManager.I.Settings.RaycastPrecision < .1f) return;
 
-        Gizmos.color = Color.blue;
+        Gizmos.color = Color.cyan;
 
         Vector2 _firstPos = new Vector2(collider.bounds.center.x + collider.bounds.extents.x, collider.bounds.center.y - collider.bounds.extents.y);
         float _precision = collider.bounds.size.y / ((int)(collider.bounds.size.y / NWH_GameManager.I.Settings.RaycastPrecision));
@@ -343,10 +385,11 @@ public class NWH_Movable : MonoBehaviour
     // Start is called before the first frame update
     protected virtual void Start()
     {
-        Velocity += new Vector2(0, 25);
+        isOnGround = true;
+        if (useGravity) UseGravity = true;
     }
 
-    protected virtual void Update()
+    private void Update()
     {
         MoveInDirection(new Vector2(Input.GetAxis("Horizontal"), 0));
     }
