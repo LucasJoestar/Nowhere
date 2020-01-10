@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class NWH_Movable : MonoBehaviour
 {
     #region Fields / Properties
@@ -18,7 +19,7 @@ public class NWH_Movable : MonoBehaviour
      *********************************/
 
 
-    /// <summary>Backing field for <see cref="IsFacingRightSide"/>.</summary>
+    /// <summary>Backing field for <see cref="IsFacingRight"/>.</summary>
     [SerializeField] protected bool                 isFacingRight =     true;
 
     /// <summary>Backing field for <see cref="IsMoving"/>.</summary>
@@ -50,9 +51,9 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>
-    /// Layers obstacles to this object.
+    /// Obstacles layers to this object collisions.
     /// </summary>
-    [SerializeField] protected LayerMask            obstacleLayers =    new LayerMask();
+    [SerializeField] protected LayerMask            obstaclesMask =     new LayerMask();
 
 
     /// <summary>Backing field for <see cref="Velocity"/>.</summary>
@@ -67,9 +68,13 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Indicates if the object is facing the right side of the screen or not.
     /// </summary>
-    public bool     IsFacingRightSide
+    public bool     IsFacingRight
     {
         get { return isFacingRight; }
+        protected set
+        {
+            isFacingRight = value;
+        }
     }
 
     /// <summary>
@@ -78,6 +83,10 @@ public class NWH_Movable : MonoBehaviour
     public bool     IsMoving
     {
         get { return isMoving; }
+        protected set
+        {
+            isMoving = value;
+        }
     }
 
     /// <summary>
@@ -86,7 +95,7 @@ public class NWH_Movable : MonoBehaviour
     public bool     IsOnGround
     {
         get { return isOnGround; }
-        private set
+        protected set
         {
             isOnGround = value;
             if (!value && (velocity.y == 0)) Velocity = new Vector2(velocity.x, -2.5f);
@@ -104,12 +113,12 @@ public class NWH_Movable : MonoBehaviour
             useGravity = value;
             if (value)
             {
-                if (checkOnGroundCoroutine == null) checkOnGroundCoroutine = StartCoroutine(CheckOnGround());
+                if (cCheckOnGround == null) cCheckOnGround = StartCoroutine(CheckOnGround());
             }
-            else if (checkOnGroundCoroutine != null)
+            else if (cCheckOnGround != null)
             {
-                StopCoroutine(checkOnGroundCoroutine);
-                checkOnGroundCoroutine = null;
+                StopCoroutine(cCheckOnGround);
+                cCheckOnGround = null;
             }
         }
     }
@@ -124,20 +133,20 @@ public class NWH_Movable : MonoBehaviour
         set
         {
             velocity = value;
-            if ((value != Vector2.zero) && (applyVelocityCoroutine == null)) applyVelocityCoroutine = StartCoroutine(ApplyVelocity());
+            if ((value != Vector2.zero) && (cApplyVelocity == null)) cApplyVelocity = StartCoroutine(ApplyVelocity());
         }
     }
     #endregion
 
     #region Coroutines & Memory
     /// <summary>Stored coroutine of the <see cref="ApplyVelocity"/> method.</summary>
-    protected Coroutine     applyVelocityCoroutine =      null;
+    protected Coroutine     cApplyVelocity =        null;
 
     /// <summary>Stored coroutine of the <see cref="CheckOnGround"/> method.</summary>
-    protected Coroutine     checkOnGroundCoroutine =    null;
+    protected Coroutine     cCheckOnGround =        null;
 
     /// <summary>Stored coroutine of the <see cref="DoMoveTo"/> method.</summary>
-    protected Coroutine     doMoveToCoroutine =           null;
+    protected Coroutine     cDoMoveTo =             null;
     #endregion
 
     #endregion
@@ -145,6 +154,8 @@ public class NWH_Movable : MonoBehaviour
     #region Methods
 
     #region Original Methods
+
+    #region IEnumerators
     /**********************************
      ******     IENUMERATORS     ******
      *********************************/
@@ -158,45 +169,35 @@ public class NWH_Movable : MonoBehaviour
     {
         while (velocity != Vector2.zero)
         {
-            Vector2 _movement = velocity * Time.deltaTime;
-            DoPerformMovement(ref _movement);
+            yield return null;
 
+            if (DoPerformMovement(velocity * Time.deltaTime))
+            {
+                velocity = new Vector2(0, velocity.y > 0 ? -2 : 0);
+                continue;
+            }
+
+            // X velocity
             if (velocity.x != 0)
             {
-                if (_movement.x == 0) velocity.x = 0;
-                else
-                {
-                    velocity.x *= .975f;
-                    if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
-                }
+                velocity.x *= .975f;
+                if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
             }
 
-            if (velocity.y != 0)
+            // Y velocity
+            if (velocity.y > 0)
             {
-                if (_movement.y == 0)
-                {
-                    if (velocity.y > 0) velocity.y *= -.75f;
-                    else velocity.y = 0;
-                }
-                else
-                {
-                    if (velocity.y > 0)
-                    {
-                        velocity.y *= .925f;
+                velocity.y *= .925f;
 
-                        if (velocity.y < .2f) velocity.y *= -1;
-                    }
-                    else if (velocity.y > FALLING_MAX_VELOCITY)
-                    {
-                        velocity.y = Mathf.Max(FALLING_MAX_VELOCITY, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
-                    }
-                }
+                if (velocity.y < .2f) velocity.y *= -1;
             }
-
-            yield return null;
+            else if (velocity.y > FALLING_MAX_VELOCITY)
+            {
+                velocity.y = Mathf.Max(FALLING_MAX_VELOCITY, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
+            }
         }
 
-        applyVelocityCoroutine = null;
+        cApplyVelocity = null;
     }
 
     /// <summary>
@@ -230,22 +231,23 @@ public class NWH_Movable : MonoBehaviour
             if (!PerformMovement(_to - (Vector2)transform.position)) break;
         }
 
-        doMoveToCoroutine = null;
+        cDoMoveTo = null;
         isMoving = false;
     }
+    #endregion
 
-
+    #region Flip
     /**********************************
-     **********     FIXS     **********
+     **********     FLIP     **********
      *********************************/
 
 
     /// <summary>
     /// Makes the object flip.
     /// </summary>
-    protected virtual void Flip()
+    public virtual void Flip()
     {
-        isFacingRight = !isFacingRight;
+        IsFacingRight = !isFacingRight;
         transform.localScale = new Vector3(transform.localScale.x * -1, transform.localScale.y, transform.localScale.z);
     }
 
@@ -261,92 +263,138 @@ public class NWH_Movable : MonoBehaviour
         Flip();
         return true;
     }
+    #endregion
+
+    #region Movements
+    /*********************************
+     *******     MEDIATORS     *******
+     ********************************/
 
 
     /// <summary>
     /// Makes the object move in a given direction.
     /// </summary>
     /// <param name="_dir">Direction to move to.</param>
-    /// <returns>Returns true if position changed, false otherwise.</returns>
+    /// <returns>Returns true if hit something, false otherwise.</returns>
     public virtual bool MoveInDirection(Vector2 _dir)
     {
         return DoPerformMovement(_dir.normalized * speed);
     }
 
     /// <summary>
-    /// Makes the object move to a specified position.
+    /// Makes the object move to a specific position.
     /// </summary>
-    /// <param name="_to">Aimed position.</param>
+    /// <param name="_to">Destination.</param>
     public void MoveTo(Vector2 _to)
     {
-        if (doMoveToCoroutine != null) StopCoroutine(doMoveToCoroutine);
-        doMoveToCoroutine = StartCoroutine(DoMoveTo(_to));
+        if (cDoMoveTo != null) StopCoroutine(cDoMoveTo);
+        cDoMoveTo = StartCoroutine(DoMoveTo(_to));
     }
 
     /// <summary>
     /// Makes the object perform a given movement, limited by its speed.
     /// </summary>
     /// <param name="_movement">Movement to perform.</param>
-    /// <returns>Returns true if position changed, false otherwise.</returns>
+    /// <returns>Returns true if hit something, false otherwise.</returns>
     public virtual bool PerformMovement(Vector2 _movement)
     {
-        _movement = _movement.normalized * Mathf.Min(_movement.magnitude, speed);
+        if (_movement.magnitude > speed) _movement = _movement.normalized * speed;
         return DoPerformMovement(_movement);
     }
-
-
-    /// <summary>
-    /// Makes the object perform a given movement.
-    /// </summary>
-    /// <param name="_movement">Movement to perform.</param>
-    /// <returns>Returns true if position changed, false otherwise.</returns>
-    protected virtual bool DoPerformMovement(Vector2 _movement)
-    {
-        return DoPerformMovement(ref _movement);
-    }
-
-    /// <summary>
-    /// Makes the object perform a given movement.
-    /// </summary>
-    /// <param name="_movement">Movement to perform.</param>
-    /// <returns>Returns true if position changed, false otherwise.</returns>
-    protected virtual bool DoPerformMovement(ref Vector2 _movement)
-    {
-        RaycastHit2D[] _hit = new RaycastHit2D[1];
-        if (collider.Cast(new Vector2(_movement.x, 0), _hit, Mathf.Abs(_movement.x)) > 0)
-        {
-            //Debug.Log(_hit[0].collider.name + " | " + _hit[0].distance);
-            _movement.x = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.x);
-        }
-        if (collider.Cast(new Vector2(0, _movement.y), _hit, Mathf.Abs(_movement.y)) > 0)
-        {
-            _movement.y = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.y);
-        }
-
-        //bool _doHit = NWH_Physics.RaycastBox((BoxCollider2D)collider, ref _movement, obstacleLayers);
-
-        if (_movement == Vector2.zero) return false;
-
-        transform.position = (Vector2)transform.position + _movement;
-        rigidbody.position += _movement;
-
-        return true;
-    }
-
 
     /// <summary>
     /// Stops the object from moving.
     /// </summary>
     public void StopMoving()
     {
-        if (doMoveToCoroutine != null)
+        if (cDoMoveTo != null)
         {
-            StopCoroutine(doMoveToCoroutine);
-            doMoveToCoroutine = null;
+            StopCoroutine(cDoMoveTo);
+            cDoMoveTo = null;
 
             isMoving = false;
         }
     }
+
+
+    /*********************************
+     ******     SYSTEM COGS     ******
+     ********************************/
+
+
+    /// <summary>
+    /// Makes the object perform a given movement.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    /// <returns>Returns true if hit something, false otherwise.</returns>
+    protected virtual bool DoPerformMovement(Vector2 _movement)
+    {
+        if (_movement == Vector2.zero) return false;
+
+        bool _doHit = false;
+        RaycastHit2D[] _hit = new RaycastHit2D[1];
+        /*if (collider.Cast(new Vector2(_movement.x, 0), _hit, Mathf.Abs(_movement.x)) > 0)
+        {
+            _doHit = true;
+            _movement.x = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.x);
+        }
+        if (collider.Cast(new Vector2(0, _movement.y), _hit, Mathf.Abs(_movement.y)) > 0)
+        {
+            _doHit = true;
+            _movement.y = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.y);
+        }*/
+
+        if (collider.Cast(_movement, _hit, _movement.magnitude) > 0)
+        {
+            _movement = _movement.normalized * Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset);
+
+            if (_movement == Vector2.zero) return true;
+
+            _doHit = true;
+        }
+
+        MoveObject((Vector2)transform.position + _movement);
+
+        return _doHit;
+    }
+
+    /// <summary>
+    /// Makes the object perform a given movement.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    /// <param name="_hit">Cast result.</param>
+    /// <returns>Returns true if hit something, false otherwise.</returns>
+    protected virtual bool DoPerformMovement(Vector2 _movement, out RaycastHit2D _hit)
+    {
+        bool _doHit = false;
+        RaycastHit2D[] _rayHit = new RaycastHit2D[1];
+
+        if (collider.Cast(_movement, _rayHit, _movement.magnitude) > 0)
+        {
+            _doHit = true;
+            _movement = _movement.normalized * Mathf.Max(0, _rayHit[0].distance - Physics.defaultContactOffset);
+        }
+        _hit = _rayHit[0];
+
+        if (_movement == Vector2.zero) return _doHit;
+
+        MoveObject((Vector2)transform.position + _movement);
+
+        return _doHit;
+    }
+
+    /// <summary>
+    /// Moves the object to a specified position.
+    /// Use this instead of setting transform.position.
+    /// </summary>
+    /// <param name="_position">New position of the object.</param>
+    protected void MoveObject(Vector2 _position)
+    {
+        rigidbody.position = _position;
+        transform.position = _position;
+    }
+    #endregion
+
     #endregion
 
     #region Unity Methods
@@ -359,39 +407,11 @@ public class NWH_Movable : MonoBehaviour
         #endif
     }
 
-    private void OnDrawGizmos()
-    {
-        if (!NWH_GameManager.I || NWH_GameManager.I.Settings.RaycastPrecision < .1f) return;
-
-        Gizmos.color = Color.cyan;
-
-        Vector2 _firstPos = new Vector2(collider.bounds.center.x + collider.bounds.extents.x, collider.bounds.center.y - collider.bounds.extents.y);
-        float _precision = collider.bounds.size.y / ((int)(collider.bounds.size.y / NWH_GameManager.I.Settings.RaycastPrecision));
-
-        for (float _i = collider.bounds.size.y; _i > -.001f; _i -= _precision)
-        {
-            Gizmos.DrawSphere(new Vector2(_firstPos.x, _firstPos.y + _i), NWH_GameManager.I.Settings.RaycastPrecision / 2f);
-        }
-
-        _firstPos = new Vector2(collider.bounds.center.x - collider.bounds.extents.x, collider.bounds.center.y + collider.bounds.extents.y);
-        _precision = collider.bounds.size.x / ((int)(collider.bounds.size.x / NWH_GameManager.I.Settings.RaycastPrecision));
-
-        for (float _i = collider.bounds.size.x; _i > -.001f; _i -= _precision)
-        {
-            Gizmos.DrawSphere(new Vector2(_firstPos.x + _i, _firstPos.y), NWH_GameManager.I.Settings.RaycastPrecision / 2f);
-        }
-    }
-
     // Start is called before the first frame update
     protected virtual void Start()
     {
-        isOnGround = true;
+        IsOnGround = true;
         if (useGravity) UseGravity = true;
-    }
-
-    private void Update()
-    {
-        MoveInDirection(new Vector2(Input.GetAxis("Horizontal"), 0));
     }
     #endregion
 
