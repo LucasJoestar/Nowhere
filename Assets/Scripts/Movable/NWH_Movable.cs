@@ -6,13 +6,6 @@ public class NWH_Movable : MonoBehaviour
 {
     #region Fields / Properties
 
-    #region Constants
-    /// <summary>
-    /// Velocity Y minimum value.
-    /// </summary>
-    private const float     FALLING_MAX_VELOCITY =  -25;
-    #endregion
-
     #region Parameters
     /**********************************
      *********     FIELDS     *********
@@ -33,9 +26,15 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>
-    /// Movement speed of the object.
+    /// Velocity Y minimum value when falling.
     /// </summary>
+    [SerializeField] protected float                fallMinVelocity =   -25;
+
+    /// <summary>Backing field for <see cref="Speed"/>.</summary>
     [SerializeField] protected float                speed =             1;
+
+    /// <summary>Backing field for <see cref="SpeedCoef"/>.</summary>
+    [SerializeField] protected float                speedCoef =         1;
 
 
     /// <summary>
@@ -66,9 +65,9 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>
-    /// Indicates if the object is facing the right side of the screen or not.
+    /// Indicates if the object is facing the right side of the screen or th left one.
     /// </summary>
-    public bool     IsFacingRight
+    public bool         IsFacingRight
     {
         get { return isFacingRight; }
         protected set
@@ -80,7 +79,7 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Indicates if the object is currently moving to a destination.
     /// </summary>
-    public bool     IsMoving
+    public bool         IsMoving
     {
         get { return isMoving; }
         protected set
@@ -92,7 +91,7 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Indicates if the object is touching ground.
     /// </summary>
-    public bool     IsOnGround
+    public bool         IsOnGround
     {
         get { return isOnGround; }
         protected set
@@ -105,7 +104,7 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// If true, the object will be affected by physics gravity and ground attraction.
     /// </summary>
-    public bool     UseGravity
+    public bool         UseGravity
     {
         get { return useGravity; }
         set
@@ -125,9 +124,31 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>
-    /// Movement velocity of the object.
+    /// Base movement speed of the object (per second).
     /// </summary>
-    public Vector2  Velocity
+    public float        Speed
+    {
+        get { return speed; }
+    }
+
+    /// <summary>
+    /// Movement speed coefficient.
+    /// </summary>
+    public float        SpeedCoef
+    {
+        get { return speedCoef; }
+        set
+        {
+            if (value < 0) value = 0;
+            speedCoef = value;
+        }
+    }
+
+
+    /// <summary>
+    /// Movement velocity of the object (per second).
+    /// </summary>
+    public Vector2      Velocity
     {
         get { return velocity; }
         set
@@ -139,6 +160,11 @@ public class NWH_Movable : MonoBehaviour
     #endregion
 
     #region Coroutines & Memory
+    /**********************************
+     *******     COROUTINES     *******
+     *********************************/
+
+
     /// <summary>Stored coroutine of the <see cref="ApplyVelocity"/> method.</summary>
     protected Coroutine     cApplyVelocity =        null;
 
@@ -147,6 +173,18 @@ public class NWH_Movable : MonoBehaviour
 
     /// <summary>Stored coroutine of the <see cref="DoMoveTo"/> method.</summary>
     protected Coroutine     cDoMoveTo =             null;
+
+
+    /**********************************
+     *********     MEMORY     *********
+     *********************************/
+
+
+    /// <summary>
+    /// This object position at previous frame.
+    /// Updated during late update.
+    /// </summary>
+    protected Vector2       lastPosition =          new Vector2();
     #endregion
 
     #endregion
@@ -188,12 +226,11 @@ public class NWH_Movable : MonoBehaviour
             if (velocity.y > 0)
             {
                 velocity.y *= .925f;
-
                 if (velocity.y < .2f) velocity.y *= -1;
             }
-            else if (velocity.y > FALLING_MAX_VELOCITY)
+            else if (velocity.y > fallMinVelocity)
             {
-                velocity.y = Mathf.Max(FALLING_MAX_VELOCITY, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
+                velocity.y = Mathf.Max(fallMinVelocity, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
             }
         }
 
@@ -206,10 +243,14 @@ public class NWH_Movable : MonoBehaviour
     /// <returns></returns>
     protected virtual IEnumerator CheckOnGround()
     {
+        if (!isOnGround) IsOnGround = true;
+
         while (true)
         {
             RaycastHit2D[] _hit = new RaycastHit2D[1];
             if ((collider.Cast(new Vector2(0, -.1f), _hit, .1f) > 0) != isOnGround) IsOnGround = !isOnGround;
+
+            if (!isOnGround && velocity.y == 0) Velocity = new Vector2(velocity.x, -2.5f);
 
             yield return null;
         }
@@ -222,8 +263,6 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>IEnumerator, baby.</returns>
     protected virtual IEnumerator DoMoveTo(Vector2 _to)
     {
-        isMoving = true;
-
         while ((Mathf.Abs(transform.position.x - _to.x) > .01f) || (Mathf.Abs(transform.position.y - _to.y) > .01f))
         {
             yield return null;
@@ -232,7 +271,6 @@ public class NWH_Movable : MonoBehaviour
         }
 
         cDoMoveTo = null;
-        isMoving = false;
     }
     #endregion
 
@@ -272,13 +310,23 @@ public class NWH_Movable : MonoBehaviour
 
 
     /// <summary>
+    /// Get this object movement speed for this frame.
+    /// </summary>
+    /// <returns>Returns this frame speed.</returns>
+    protected virtual float GetMovementSpeed()
+    {
+        return speed * speedCoef * Time.deltaTime;
+    }
+
+
+    /// <summary>
     /// Makes the object move in a given direction.
     /// </summary>
     /// <param name="_dir">Direction to move to.</param>
     /// <returns>Returns true if hit something, false otherwise.</returns>
     public virtual bool MoveInDirection(Vector2 _dir)
     {
-        return DoPerformMovement(_dir.normalized * speed);
+        return DoPerformMovement(_dir.normalized * GetMovementSpeed());
     }
 
     /// <summary>
@@ -298,21 +346,19 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>Returns true if hit something, false otherwise.</returns>
     public virtual bool PerformMovement(Vector2 _movement)
     {
-        if (_movement.magnitude > speed) _movement = _movement.normalized * speed;
+        if (_movement.magnitude > GetMovementSpeed()) _movement = _movement.normalized * GetMovementSpeed();
         return DoPerformMovement(_movement);
     }
 
     /// <summary>
     /// Stops the object from moving.
     /// </summary>
-    public void StopMoving()
+    public void StopMovingTo()
     {
         if (cDoMoveTo != null)
         {
             StopCoroutine(cDoMoveTo);
             cDoMoveTo = null;
-
-            isMoving = false;
         }
     }
 
@@ -388,10 +434,32 @@ public class NWH_Movable : MonoBehaviour
     /// Use this instead of setting transform.position.
     /// </summary>
     /// <param name="_position">New position of the object.</param>
-    protected void MoveObject(Vector2 _position)
+    public void MoveObject(Vector2 _position)
     {
-        rigidbody.position = _position;
+        // Flip if not facing movement side.
+        if (Mathf.Sign(_position.x - transform.position.x) != isFacingRight.ToSign()) Flip();
+
         transform.position = _position;
+        rigidbody.position = _position;
+    }
+
+    /// <summary>
+    /// Updates informations about position.
+    /// Called during late update.
+    /// </summary>
+    /// <returns>Returns true if position changed, false otherwise.</returns>
+    protected virtual bool UpdatePosition()
+    {
+        // Update isMoving value if needed
+        if ((Vector2)transform.position == lastPosition)
+        {
+            if (isMoving) IsMoving = false;
+            return false;
+        }
+        if (!isMoving) IsMoving = true;
+
+        lastPosition = transform.position;
+        return true;
     }
     #endregion
 
@@ -407,11 +475,17 @@ public class NWH_Movable : MonoBehaviour
         #endif
     }
 
+    // LateUpdate is called after all Update functions have been called
+    protected virtual void LateUpdate()
+    {
+        UpdatePosition();
+    }
+
     // Start is called before the first frame update
     protected virtual void Start()
     {
-        IsOnGround = true;
         if (useGravity) UseGravity = true;
+        lastPosition = transform.position;
     }
     #endregion
 

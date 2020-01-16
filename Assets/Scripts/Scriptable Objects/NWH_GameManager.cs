@@ -53,7 +53,7 @@ public class NWH_GameManager : ScriptableObject
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     /// <summary>
-    /// 
+    /// Loads the Game Manager before the first scene is being loaded.
     /// </summary>
     public static void LoadInstance()
     {

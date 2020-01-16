@@ -1,6 +1,6 @@
 ﻿using UnityEngine;
 
-[CreateAssetMenu(fileName = "Settings", menuName = "Resources/Settings", order = 50)]
+[CreateAssetMenu(fileName = "Settings", menuName = "Datas/Settings", order = 50)]
 public class NWH_Settings : ScriptableObject
 {
     #region Mechanics
