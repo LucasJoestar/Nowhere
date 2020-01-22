@@ -2063,7 +2063,7 @@ MonoBehaviour:
   isMoving: 0
   isOnGround: 0
   useGravity: 1
-  fallMinVelocity: -25
+  fallMinVelocity: -12
   speed: 1
   speedCoef: 1
   collider: {fileID: 1731601546}

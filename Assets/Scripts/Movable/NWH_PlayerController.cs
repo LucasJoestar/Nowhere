@@ -108,40 +108,50 @@ public class NWH_PlayerController : NWH_Movable
      *********************************/
 
 
-    protected IEnumerator CheckInputs()
+    protected void CheckActions()
     {
-        float _movement;
+        if (Input.GetKeyDown(KeyCode.Space)) Jump();
+    }
 
-        while (true)
+    protected void CheckMovement()
+    {
+        // If no movement, skip this frame
+        float _movement = _movement = Input.GetAxis("Horizontal");
+        if (_movement == 0)
         {
-            yield return null;
-
-            if (Input.GetKeyDown(KeyCode.Space)) Jump();
-
-            // If no movement, skip this frame
-            _movement = Input.GetAxis("Horizontal");
-            if (_movement == 0)
+            // Reset speed after not moving during a certain amount of time
+            if (notMovingTime < RESET_SPEED_TIME)
             {
-                // Reset speed after not moving during a certain amount of time
-                if (notMovingTime < RESET_SPEED_TIME)
-                {
-                    notMovingTime += Time.deltaTime;
-                    if (notMovingTime >= RESET_SPEED_TIME) ResetSpeed();
-                }
-                continue;
-            }
-            if (notMovingTime > 0) notMovingTime = 0;
-
-            // Increase speed according to the associated curve.
-            if (speedCurveTime < attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time)
-            {
-                speedCurveTime = Mathf.Min(speedCurveTime + Time.deltaTime, attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time);
-
-                speed = attributes.SpeedCurve.Evaluate(speedCurveTime);
+                notMovingTime += Time.deltaTime;
+                if (notMovingTime >= RESET_SPEED_TIME) ResetSpeed();
             }
 
-            MoveInDirection(new Vector2(_movement, 0));
+            return;
         }
+        if (notMovingTime > 0) notMovingTime = 0;
+
+        // Increase speed according to the associated curve.
+        if (speedCurveTime < attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time)
+        {
+            speedCurveTime = Mathf.Min(speedCurveTime + Time.deltaTime, attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time);
+
+            speed = attributes.SpeedCurve.Evaluate(speedCurveTime);
+        }
+
+        if (!isOnGround)
+        {
+            _movement /= Time.deltaTime * speed;
+            if (_movement > 0)
+            {
+                if (velocity.x >= _movement) return;
+            }
+            else if (velocity.x <= _movement) return;
+
+            Velocity = new Vector2(velocity.x + ((_movement - velocity.x) * (speed * Time.deltaTime)), velocity.y);
+            return;
+        }
+
+        MoveInDirection(new Vector2(_movement, 0));
     }
     #endregion
 
@@ -226,31 +236,38 @@ public class NWH_PlayerController : NWH_Movable
         AnimationCurve _curve = null;
         isJumping = true;
 
-        if (isOnGround) _curve = attributes.JumpCurve;
+        // Executes actions depending on performing a normal or a wall jump.
+        if (isOnGround)
+        {
+            _curve = attributes.JumpCurve;
+
+            // If moving, add extra X velocity to the player
+            if (isMoving) Velocity = new Vector2(velocity.x + (speed * isFacingRight.ToSign() * .25f), velocity.y);
+        }
         else
         {
+            _curve = attributes.WallJumpCurve;
+
             // When performing a wall jump, add opposite side X velocity.
             Velocity = new Vector2(velocity.x + (attributes.WallJumpXVelocity * (int)wallStuckState), velocity.y);
-
-            _curve = attributes.WallJumpCurve;
         }
 
         // Perform jump over time following the associated curve
         float _time = 0;
         float _limit = _curve[_curve.length - 1].time;
 
+        // While holding the jump button and havn't reached jump maximum duration,
+        // add more vertical velocity !
         while (Input.GetKey(KeyCode.Space))
         {
             // Move up
-            Velocity = new Vector2(velocity.x, _curve.Evaluate(_time));
+            Velocity = new Vector2(velocity.x, velocity.y + _curve.Evaluate(_time));
 
             if (_time == _limit) break;
 
             yield return null;
             _time = Mathf.Min(_time + Time.deltaTime, _limit);
         }
-
-        velocity.y = 0;
 
         isJumping = false;
         cDoJump = null;
@@ -322,6 +339,11 @@ public class NWH_PlayerController : NWH_Movable
         }
 	}
 
+    private void FixedUpdate()
+    {
+        CheckMovement();
+    }
+
     // Start is called before the first frame update
     protected override void Start()
     {
@@ -330,10 +352,13 @@ public class NWH_PlayerController : NWH_Movable
         // Get attributes values
         fallMinVelocity = attributes.FallMinVelocity;
         speed = attributes.SpeedCurve[0].value;
-
-        StartCoroutine(CheckInputs());
     }
-	#endregion
-	
-	#endregion
+
+    private void Update()
+    {
+        CheckActions();
+    }
+    #endregion
+
+    #endregion
 }

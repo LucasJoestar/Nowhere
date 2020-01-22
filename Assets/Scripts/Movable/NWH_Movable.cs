@@ -218,19 +218,19 @@ public class NWH_Movable : MonoBehaviour
             // X velocity
             if (velocity.x != 0)
             {
-                velocity.x *= .975f;
+                velocity.x *= .99f;
                 if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
             }
 
             // Y velocity
             if (velocity.y > 0)
             {
-                velocity.y *= .925f;
-                if (velocity.y < .2f) velocity.y *= -1;
+                velocity.y *= .8f;
+                if (velocity.y < .25f) velocity.y *= -1;
             }
             else if (velocity.y > fallMinVelocity)
             {
-                velocity.y = Mathf.Max(fallMinVelocity, velocity.y * (velocity.y > -1.5f ? 1.1f : 1.05f));
+                velocity.y = Mathf.Max(fallMinVelocity, velocity.y * (velocity.y > -1.5f ? 1.5f : 1.1f));
             }
         }
 
