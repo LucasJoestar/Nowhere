@@ -209,11 +209,8 @@ public class NWH_Movable : MonoBehaviour
         {
             yield return null;
 
-            if (DoPerformMovement(velocity * Time.deltaTime))
-            {
-                velocity = new Vector2(0, velocity.y > 0 ? -2 : 0);
-                continue;
-            }
+            // Perform velocity movement
+            DoPerformMovement(velocity * Time.deltaTime);
 
             // X velocity
             if (velocity.x != 0)
@@ -248,7 +245,7 @@ public class NWH_Movable : MonoBehaviour
         while (true)
         {
             RaycastHit2D[] _hit = new RaycastHit2D[1];
-            if ((collider.Cast(new Vector2(0, -.1f), _hit, .1f) > 0) != isOnGround) IsOnGround = !isOnGround;
+            if ((collider.Cast(new Vector2(0, -1f), _hit, .1f) > 0) != isOnGround) IsOnGround = !isOnGround;
 
             if (!isOnGround && velocity.y == 0) Velocity = new Vector2(velocity.x, -2.5f);
 
@@ -379,51 +376,46 @@ public class NWH_Movable : MonoBehaviour
 
         bool _doHit = false;
         RaycastHit2D[] _hit = new RaycastHit2D[1];
-        /*if (collider.Cast(new Vector2(_movement.x, 0), _hit, Mathf.Abs(_movement.x)) > 0)
-        {
-            _doHit = true;
-            _movement.x = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.x);
-        }
-        if (collider.Cast(new Vector2(0, _movement.y), _hit, Mathf.Abs(_movement.y)) > 0)
-        {
-            _doHit = true;
-            _movement.y = Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset) * Mathf.Sign(_movement.y);
-        }*/
 
+        // Cast the collider in the movement direction to detect collisions
         if (collider.Cast(_movement, _hit, _movement.magnitude) > 0)
         {
-            _movement = _movement.normalized * Mathf.Max(0, _hit[0].distance - Physics.defaultContactOffset);
+            _movement = _movement.normalized * _hit[0].distance;
+
+            // Constrain X & Y movement with default contact offset
+            // Y movement
+            if ((_movement.y != 0) && (_hit[0].normal.y != 0))
+            {
+                if (Mathf.Abs(_movement.y) > Physics2D.defaultContactOffset)
+                {
+                    _movement.y -= Physics2D.defaultContactOffset * Mathf.Sign(_movement.y);
+
+                    // Change velocity on obstacle hit
+                    if (velocity.y != 0) velocity.y = 0;
+                    if (velocity.x != 0) velocity.x = _movement.y < 0 ? 0 : velocity.x * .75f;
+                }
+                else _movement.y = 0;
+            }
+            // X movement
+            if ((_movement.x != 0) && (_hit[0].normal.x != 0))
+            {
+                if (Mathf.Abs(_movement.x) > Physics2D.defaultContactOffset)
+                {
+                    _movement.x -= Physics2D.defaultContactOffset * Mathf.Sign(_movement.x);
+
+                    // Change velocity on obstacle hit
+                    if (velocity.x != 0) velocity.x = 0;
+                    if (velocity.y != 0) velocity.y *= .75f;
+                }
+                else _movement.x = 0;
+            }
 
             if (_movement == Vector2.zero) return true;
 
             _doHit = true;
         }
 
-        MoveObject((Vector2)transform.position + _movement);
-
-        return _doHit;
-    }
-
-    /// <summary>
-    /// Makes the object perform a given movement.
-    /// </summary>
-    /// <param name="_movement">Movement to perform.</param>
-    /// <param name="_hit">Cast result.</param>
-    /// <returns>Returns true if hit something, false otherwise.</returns>
-    protected virtual bool DoPerformMovement(Vector2 _movement, out RaycastHit2D _hit)
-    {
-        bool _doHit = false;
-        RaycastHit2D[] _rayHit = new RaycastHit2D[1];
-
-        if (collider.Cast(_movement, _rayHit, _movement.magnitude) > 0)
-        {
-            _doHit = true;
-            _movement = _movement.normalized * Mathf.Max(0, _rayHit[0].distance - Physics.defaultContactOffset);
-        }
-        _hit = _rayHit[0];
-
-        if (_movement == Vector2.zero) return _doHit;
-
+        // Now move the object to its new position
         MoveObject((Vector2)transform.position + _movement);
 
         return _doHit;
