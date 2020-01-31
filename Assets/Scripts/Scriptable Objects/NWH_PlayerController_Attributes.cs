@@ -8,7 +8,6 @@ public class NWH_PlayerController_Attributes : ScriptableObject
      ******     ANIM. CURVES     ******
      *********************************/
 
-
     /// <summary>
     /// Jump Y axis movement over time.
     /// </summary>
@@ -34,12 +33,6 @@ public class NWH_PlayerController_Attributes : ScriptableObject
     /**********************************
      *******     PARAMETERS     *******
      *********************************/
-
-
-    /// <summary>
-    /// Velocity Y minimum value when falling.
-    /// </summary>
-    public float            FallMinVelocity =       -10;
 
     /// <summary>
     /// X velocity applied to the player when performing a wall jump.

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 
 #if UNITY_EDITOR
 using System.IO;
@@ -7,28 +8,33 @@ using UnityEditor;
 
 public class NWH_GameManager : ScriptableObject
 {
-    #region Fields / Properties
+    #region Constants
     /*********************************
      *******     CONSTANTS     *******
      ********************************/
 
+    private const string FILE_PATH = "GameManager";
+    #endregion
 
-    private const string                    FILE_PATH = "GameManager";
-
-
+    #region Fields / Properties
     /********************************
      ********     FIELDS     ********
      *******************************/
 
-
     /// <summary>Backing field for <see cref="Settings"/>.</summary>
-    [SerializeField] private NWH_Settings     settings =  null;
+    [SerializeField]
+    private NWH_Settings        settings =      null;
+
+    /// <summary>
+    /// Game update mode order
+    /// </summary>
+    [SerializeField]
+    private NWH_UpdateOrder     updateOrder =   new NWH_UpdateOrder();
 
 
     /********************************
      ******     PROPERTIES     ******
      *******************************/
-
 
     /// <summary>
     /// Settings scriptable object of the game.
@@ -37,24 +43,25 @@ public class NWH_GameManager : ScriptableObject
     #endregion
 
     #region Singleton
+    /*********************************
+     *******     SINGLETON     *******
+     ********************************/
+
     /// <summary>
-    /// Singleton instance of the Game Manager.
+    /// Singleton instance of this class.
     /// </summary>
-    public static NWH_GameManager I = null;
+    public static NWH_GameManager   I =     null;
     #endregion
 
     #region Methods
-
-    #region Original Methods
     /**********************************************
-     ******     RUNTIME INSTANCE LOADING     ******
+     *****     RUNTIME INITIALIZE ON LOAD     *****
      *********************************************/
 
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     /// <summary>
     /// Loads the Game Manager before the first scene is being loaded.
     /// </summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static void LoadInstance()
     {
         I = Resources.Load<NWH_GameManager>(FILE_PATH);
@@ -62,26 +69,38 @@ public class NWH_GameManager : ScriptableObject
         if (!I) Debug.LogError($"Error ! No Game Manager found on the project. Please place it in a Resources folder at path {FILE_PATH}.asset");
     }
 
+    /// <summary>
+    /// Initialize what needs to be after first scene loading.
+    /// </summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    public static void InitializeGame()
+    {
+        // Create game update system
+        NWH_UpdateSystem.CreateInstance(I.updateOrder.UpdateModes);
+    }
+
 
     /**********************************
      *********     EDITOR     *********
      *********************************/
 
-
     #if UNITY_EDITOR
-    [MenuItem("Nowhere/Create Game Manager")]
     /// <summary>
-    /// Creates an instance of a GameManager if none is found on the project database or get the one existing.
+    /// Creates an instance of a GameManager if none is found
+    /// on the project database, or get the one existing.
     /// </summary>
+    [MenuItem("Nowhere/Create Game Manager")]
     public static void CreateInstance()
     {
         Object _gameManager = null;
-
         string[] _gameManagers = AssetDatabase.FindAssets($"t:NWH_GameManager");
+
+        // Get first GameManager if existing...
         if (_gameManagers.Length > 0)
         {
             _gameManager = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(_gameManagers[0]), typeof(NWH_GameManager));
         }
+        // ... Or create one if not
         else
         {
             string _path = string.Empty;
@@ -103,15 +122,10 @@ public class NWH_GameManager : ScriptableObject
             _gameManager = AssetDatabase.LoadAssetAtPath(_path, typeof(NWH_GameManager));
         }
         
+        // Select the GameManager in the project window
         EditorGUIUtility.PingObject(_gameManager);
         Selection.objects = new Object[] { _gameManager };
     }
     #endif
-    #endregion
-
-    #region Unity Methods
-
-    #endregion
-
     #endregion
 }

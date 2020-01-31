@@ -13,3 +13,17 @@ MonoBehaviour:
   m_Name: GameManager
   m_EditorClassIdentifier: 
   settings: {fileID: 11400000, guid: d23891830d7703d4d9374e7a953b9a8b, type: 2}
+  updateOrder:
+    updateModes:
+    - isFrameInterval: 0
+      updateInterval: 10
+      name: 
+    - isFrameInterval: 0
+      updateInterval: 0
+      name: 
+    - isFrameInterval: 0
+      updateInterval: 0
+      name: 
+    - isFrameInterval: 0
+      updateInterval: 0
+      name: 

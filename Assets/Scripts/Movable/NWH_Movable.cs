@@ -6,63 +6,73 @@ public class NWH_Movable : MonoBehaviour
 {
     #region Fields / Properties
 
+    #region Constants
+    /// <summary>
+    /// Minimum required movement distance to move the object.
+    /// </summary>
+    public const float          MIN_MOVEMENT_DISTANCE =     .001f;
+    #endregion
+
     #region Parameters
     /**********************************
      *********     FIELDS     *********
      *********************************/
 
-
     /// <summary>Backing field for <see cref="IsFacingRight"/>.</summary>
-    [SerializeField] protected bool                 isFacingRight =     true;
+    [SerializeField]
+    protected bool                 isFacingRight =     true;
 
     /// <summary>Backing field for <see cref="IsMoving"/>.</summary>
-    [SerializeField] protected bool                 isMoving =          false;
+    [SerializeField]
+    protected bool                 isMoving =          false;
 
-    /// <summary>Backing field for <see cref="IsOnGround"/>.</summary>
-    [SerializeField] protected bool                 isOnGround =        false;
+    /// <summary>Backing field for <see cref="IsGrounded"/>.</summary>
+    [SerializeField]
+    protected bool                 isGrounded =        false;
 
     /// <summary>Backing field for <see cref="UseGravity"/>.</summary>
-    [SerializeField] protected bool                 useGravity =        true;
+    [SerializeField]
+    protected bool                 useGravity =        true;
 
-
-    /// <summary>
-    /// Velocity Y minimum value when falling.
-    /// </summary>
-    [SerializeField] protected float                fallMinVelocity =   -25;
 
     /// <summary>Backing field for <see cref="Speed"/>.</summary>
-    [SerializeField] protected float                speed =             1;
+    [SerializeField]
+    protected float                speed =             1;
 
     /// <summary>Backing field for <see cref="SpeedCoef"/>.</summary>
-    [SerializeField] protected float                speedCoef =         1;
+    [SerializeField]
+    protected float                speedCoef =         1;
 
 
     /// <summary>
     /// Physics collider of the object.
     /// </summary>
-    [SerializeField] protected new Collider2D       collider =          null;
+    [SerializeField]
+    protected new Collider2D       collider =          null;
 
     /// <summary>
     /// Rigidbody of the object (should be Kinematic).
     /// This should only be used by moving its position to update the collider one.
     /// </summary>
-    [SerializeField] protected new Rigidbody2D      rigidbody =         null;
+    [SerializeField]
+    protected new Rigidbody2D      rigidbody =         null;
 
 
     /// <summary>
-    /// Obstacles layers to this object collisions.
+    /// Obstacles layers used for this object collisions with <see cref="contactFilter"/>.
     /// </summary>
-    [SerializeField] protected LayerMask            obstaclesMask =     new LayerMask();
+    [SerializeField]
+    protected LayerMask            obstaclesMask =     new LayerMask();
 
 
     /// <summary>Backing field for <see cref="Velocity"/>.</summary>
-    [SerializeField] protected Vector2              velocity =          Vector2.zero;
+    [SerializeField]
+    protected Vector2              velocity =          Vector2.zero;
 
 
     /**********************************
      *******     PROPERTIES     *******
      *********************************/
-
 
     /// <summary>
     /// Indicates if the object is facing the right side of the screen or th left one.
@@ -91,13 +101,12 @@ public class NWH_Movable : MonoBehaviour
     /// <summary>
     /// Indicates if the object is touching ground.
     /// </summary>
-    public bool         IsOnGround
+    public bool         IsGrounded
     {
-        get { return isOnGround; }
+        get { return isGrounded; }
         protected set
         {
-            isOnGround = value;
-            if (!value && (velocity.y == 0)) Velocity = new Vector2(velocity.x, -2.5f);
+            isGrounded = value;
         }
     }
 
@@ -110,15 +119,6 @@ public class NWH_Movable : MonoBehaviour
         set
         {
             useGravity = value;
-            if (value)
-            {
-                if (cCheckOnGround == null) cCheckOnGround = StartCoroutine(CheckOnGround());
-            }
-            else if (cCheckOnGround != null)
-            {
-                StopCoroutine(cCheckOnGround);
-                cCheckOnGround = null;
-            }
         }
     }
 
@@ -164,27 +164,24 @@ public class NWH_Movable : MonoBehaviour
      *******     COROUTINES     *******
      *********************************/
 
-
     /// <summary>Stored coroutine of the <see cref="ApplyVelocity"/> method.</summary>
     protected Coroutine     cApplyVelocity =        null;
-
-    /// <summary>Stored coroutine of the <see cref="CheckOnGround"/> method.</summary>
-    protected Coroutine     cCheckOnGround =        null;
-
-    /// <summary>Stored coroutine of the <see cref="DoMoveTo"/> method.</summary>
-    protected Coroutine     cDoMoveTo =             null;
 
 
     /**********************************
      *********     MEMORY     *********
      *********************************/
 
+    /// <summary>
+    /// Contact filter used to detect collisions.
+    /// </summary>
+    protected ContactFilter2D       contactFilter =     new ContactFilter2D();
 
     /// <summary>
     /// This object position at previous frame.
     /// Updated during late update.
     /// </summary>
-    protected Vector2       lastPosition =          new Vector2();
+    protected Vector2               lastPosition =      new Vector2();
     #endregion
 
     #endregion
@@ -193,89 +190,10 @@ public class NWH_Movable : MonoBehaviour
 
     #region Original Methods
 
-    #region IEnumerators
-    /**********************************
-     ******     IENUMERATORS     ******
-     *********************************/
-
-
-    /// <summary>
-    /// Apply velocity to the object movement.
-    /// </summary>
-    /// <returns></returns>
-    protected virtual IEnumerator ApplyVelocity()
-    {
-        while (velocity != Vector2.zero)
-        {
-            yield return null;
-
-            // Perform velocity movement
-            DoPerformMovement(velocity * Time.deltaTime);
-
-            // X velocity
-            if (velocity.x != 0)
-            {
-                velocity.x *= .99f;
-                if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
-            }
-
-            // Y velocity
-            if (velocity.y > 0)
-            {
-                velocity.y *= .8f;
-                if (velocity.y < .25f) velocity.y *= -1;
-            }
-            else if (velocity.y > fallMinVelocity)
-            {
-                velocity.y = Mathf.Max(fallMinVelocity, velocity.y * (velocity.y > -1.5f ? 1.5f : 1.1f));
-            }
-        }
-
-        cApplyVelocity = null;
-    }
-
-    /// <summary>
-    /// Checks if the object is touching ground or not.
-    /// </summary>
-    /// <returns></returns>
-    protected virtual IEnumerator CheckOnGround()
-    {
-        if (!isOnGround) IsOnGround = true;
-
-        while (true)
-        {
-            RaycastHit2D[] _hit = new RaycastHit2D[1];
-            if ((collider.Cast(new Vector2(0, -1f), _hit, .1f) > 0) != isOnGround) IsOnGround = !isOnGround;
-
-            if (!isOnGround && velocity.y == 0) Velocity = new Vector2(velocity.x, -2.5f);
-
-            yield return null;
-        }
-    }
-
-    /// <summary>
-    /// IEnumerator linked to the <see cref="MoveTo(Vector2)"/> method.
-    /// </summary>
-    /// <param name="_to">Aimed position.</param>
-    /// <returns>IEnumerator, baby.</returns>
-    protected virtual IEnumerator DoMoveTo(Vector2 _to)
-    {
-        while ((Mathf.Abs(transform.position.x - _to.x) > .01f) || (Mathf.Abs(transform.position.y - _to.y) > .01f))
-        {
-            yield return null;
-
-            if (!PerformMovement(_to - (Vector2)transform.position)) break;
-        }
-
-        cDoMoveTo = null;
-    }
-    #endregion
-
     #region Flip
     /**********************************
      **********     FLIP     **********
      *********************************/
-
 
     /// <summary>
     /// Makes the object flip.
@@ -301,10 +219,42 @@ public class NWH_Movable : MonoBehaviour
     #endregion
 
     #region Movements
+    /**********************************
+     ******     IENUMERATORS     ******
+     *********************************/
+
+    /// <summary>
+    /// Apply velocity to the object movement.
+    /// </summary>
+    /// <returns></returns>
+    protected virtual IEnumerator ApplyVelocity()
+    {
+        while (velocity != Vector2.zero)
+        {
+            yield return null;
+
+            // Perform velocity movement
+            DoPerformMovement(velocity * Time.deltaTime);
+
+            // X velocity
+            if (velocity.x != 0)
+            {
+                //velocity.x *= .99f;
+                if (Mathf.Abs(velocity.x) < .01f) velocity.x = 0;
+            }
+
+            // Y velocity
+            if (velocity.y != 0) velocity.y += Physics2D.gravity.y * Time.deltaTime;
+            continue;
+        }
+
+        cApplyVelocity = null;
+    }
+
+
     /*********************************
      *******     MEDIATORS     *******
      ********************************/
-
 
     /// <summary>
     /// Get this object movement speed for this frame.
@@ -326,44 +276,10 @@ public class NWH_Movable : MonoBehaviour
         return DoPerformMovement(_dir.normalized * GetMovementSpeed());
     }
 
-    /// <summary>
-    /// Makes the object move to a specific position.
-    /// </summary>
-    /// <param name="_to">Destination.</param>
-    public void MoveTo(Vector2 _to)
-    {
-        if (cDoMoveTo != null) StopCoroutine(cDoMoveTo);
-        cDoMoveTo = StartCoroutine(DoMoveTo(_to));
-    }
-
-    /// <summary>
-    /// Makes the object perform a given movement, limited by its speed.
-    /// </summary>
-    /// <param name="_movement">Movement to perform.</param>
-    /// <returns>Returns true if hit something, false otherwise.</returns>
-    public virtual bool PerformMovement(Vector2 _movement)
-    {
-        if (_movement.magnitude > GetMovementSpeed()) _movement = _movement.normalized * GetMovementSpeed();
-        return DoPerformMovement(_movement);
-    }
-
-    /// <summary>
-    /// Stops the object from moving.
-    /// </summary>
-    public void StopMovingTo()
-    {
-        if (cDoMoveTo != null)
-        {
-            StopCoroutine(cDoMoveTo);
-            cDoMoveTo = null;
-        }
-    }
-
 
     /*********************************
      ******     SYSTEM COGS     ******
      ********************************/
-
 
     /// <summary>
     /// Makes the object perform a given movement.
@@ -372,53 +288,54 @@ public class NWH_Movable : MonoBehaviour
     /// <returns>Returns true if hit something, false otherwise.</returns>
     protected virtual bool DoPerformMovement(Vector2 _movement)
     {
-        if (_movement == Vector2.zero) return false;
+        // Get movement distance and return in inferior to minimum required
+        float _distance = _movement.magnitude;
+        if (_distance < MIN_MOVEMENT_DISTANCE) return false;
 
-        bool _doHit = false;
-        RaycastHit2D[] _hit = new RaycastHit2D[1];
+        bool _isGrounded = false;
+        RaycastHit2D[] _hitBuffer = new RaycastHit2D[16];
 
         // Cast the collider in the movement direction to detect collisions
-        if (collider.Cast(_movement, _hit, _movement.magnitude) > 0)
+        int _hitAmount = collider.Cast(_movement, contactFilter, _hitBuffer, _distance + Physics2D.defaultContactOffset);
+
+        for (int _i = 0; _i < _hitAmount; _i++)
         {
-            _movement = _movement.normalized * _hit[0].distance;
+            // Set grounded status if needed
+            //_isGrounded = _hitBuffer[_i].normal.x == 0;
 
-            // Constrain X & Y movement with default contact offset
-            // Y movement
-            if ((_movement.y != 0) && (_hit[0].normal.y != 0))
+            //if (velocity.x != 0) velocity.x *= 1 - Mathf.Abs(_hitBuffer[_i].normal.x);
+
+            // Set distance to closest hit one
+            float _hitDistance = _hitBuffer[_i].distance - Physics2D.defaultContactOffset;
+            if (_hitDistance < _distance) _distance = _hitDistance;
+
+            if (_movement.y != 0)
             {
-                if (Mathf.Abs(_movement.y) > Physics2D.defaultContactOffset)
+                if (_hitBuffer[_i].normal.y == 1f)
                 {
-                    _movement.y -= Physics2D.defaultContactOffset * Mathf.Sign(_movement.y);
-
-                    // Change velocity on obstacle hit
-                    if (velocity.y != 0) velocity.y = 0;
-                    if (velocity.x != 0) velocity.x = _movement.y < 0 ? 0 : velocity.x * .75f;
+                    _isGrounded = true;
+                    if (velocity.y < 0) velocity.y = 0;
                 }
-                else _movement.y = 0;
-            }
-            // X movement
-            if ((_movement.x != 0) && (_hit[0].normal.x != 0))
-            {
-                if (Mathf.Abs(_movement.x) > Physics2D.defaultContactOffset)
+                else if (_hitBuffer[_i].normal.y == -1)
                 {
-                    _movement.x -= Physics2D.defaultContactOffset * Mathf.Sign(_movement.x);
-
-                    // Change velocity on obstacle hit
-                    if (velocity.x != 0) velocity.x = 0;
-                    if (velocity.y != 0) velocity.y *= .75f;
+                    velocity.y = 0;
                 }
-                else _movement.x = 0;
             }
-
-            if (_movement == Vector2.zero) return true;
-
-            _doHit = true;
         }
 
-        // Now move the object to its new position
-        MoveObject((Vector2)transform.position + _movement);
+        if ((isGrounded != _isGrounded) && (_movement.y != 0))
+        {
+            Debug.Log("Ground => " + _isGrounded);
+            IsGrounded = _isGrounded;
+        }
 
-        return _doHit;
+        // Return in movement inferior to minimum distance required
+        if (_distance < MIN_MOVEMENT_DISTANCE) return true;
+
+        // Now move the object to its new position
+        MoveObject((Vector2)transform.position + (_movement.normalized * _distance));
+
+        return _hitAmount > 0;
     }
 
     /// <summary>
@@ -461,10 +378,6 @@ public class NWH_Movable : MonoBehaviour
     // Awake is called when the script instance is being loaded
     protected virtual void Awake()
 	{
-        #if UNITY_EDITOR
-        if (!collider) Debug.LogError($"Missing Collider on \"{name}\" !");
-        if (!rigidbody) Debug.LogError($"Missing Rigidbody on \"{name}\" !");
-        #endif
     }
 
     // LateUpdate is called after all Update functions have been called
@@ -473,11 +386,22 @@ public class NWH_Movable : MonoBehaviour
         UpdatePosition();
     }
 
+    // This function is called when the object becomes enabled and active
+    private void OnEnable()
+    {
+        if (!collider) collider = GetComponent<Collider2D>();
+        if (!rigidbody) rigidbody = GetComponent<Rigidbody2D>();
+    }
+
     // Start is called before the first frame update
     protected virtual void Start()
     {
-        if (useGravity) UseGravity = true;
+        // Get initial position
         lastPosition = transform.position;
+
+        // Set object contact filter
+        contactFilter.useLayerMask = true;
+        contactFilter.layerMask = obstaclesMask;
     }
     #endregion
 

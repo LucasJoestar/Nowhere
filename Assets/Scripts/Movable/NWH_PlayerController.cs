@@ -17,7 +17,6 @@ public class NWH_PlayerController : NWH_Movable
      *********     FIELDS     *********
      *********************************/
 
-
     /// <summary>Backing field for <see cref="IsJumping"/>.</summary>
     [SerializeField] protected bool                             isJumping =         false;
 
@@ -40,7 +39,6 @@ public class NWH_PlayerController : NWH_Movable
     /**********************************
      *******     PROPERTIES     *******
      *********************************/
-
 
     /// <summary>
     /// Indicates if the player is currently jumping or not.
@@ -72,7 +70,6 @@ public class NWH_PlayerController : NWH_Movable
      *******     COROUTINES     *******
      *********************************/
 
-
     /// <summary>Stored coroutine of the <see cref="DoJump"/> method.</summary>
     protected Coroutine     cDoJump =           null;
 
@@ -83,7 +80,6 @@ public class NWH_PlayerController : NWH_Movable
     /**********************************
      *********     MEMORY     *********
      *********************************/
-
 
     /// <summary>
     /// Time since player has not moved.
@@ -106,7 +102,6 @@ public class NWH_PlayerController : NWH_Movable
     /**********************************
      *********     INPUTS     *********
      *********************************/
-
 
     protected void CheckActions()
     {
@@ -138,7 +133,7 @@ public class NWH_PlayerController : NWH_Movable
             speed = attributes.SpeedCurve.Evaluate(speedCurveTime);
         }
 
-        if (!isOnGround)
+        /*if (!isGrounded)
         {
             _movement /= Time.deltaTime * speed;
             if (_movement > 0)
@@ -149,7 +144,7 @@ public class NWH_PlayerController : NWH_Movable
 
             Velocity = new Vector2(velocity.x + ((_movement - velocity.x) * (speed * Time.deltaTime)), velocity.y);
             return;
-        }
+        }*/
 
         MoveInDirection(new Vector2(_movement, 0));
     }
@@ -160,7 +155,6 @@ public class NWH_PlayerController : NWH_Movable
      ******     SPECIAL MOVES     ******
      **********************************/
 
-
     /// <summary>
     /// Makes the player start jumping.
     /// </summary>
@@ -168,7 +162,7 @@ public class NWH_PlayerController : NWH_Movable
     public bool Jump()
     {
         // Return false if cannot jump
-        if (!isOnGround && (wallStuckState == WallStuckState.None)) return false;
+        if (!isGrounded && (wallStuckState == WallStuckState.None)) return false;
 
         if (isJumping) StopCoroutine(cDoJump);
         StopSlide();
@@ -184,7 +178,7 @@ public class NWH_PlayerController : NWH_Movable
     public bool Slide()
     {
         // Return false if cannot slide
-        if (!isOnGround || isJumping || isSliding) return false;
+        if (!isGrounded || isJumping || isSliding) return false;
 
         cDoSlide = StartCoroutine(DoSlide());
         return true;
@@ -226,7 +220,6 @@ public class NWH_PlayerController : NWH_Movable
      ******     IENUMERATORS     ******
      *********************************/
 
-
     /// <summary>
     /// Makes the player perform a jump over time.
     /// </summary>
@@ -237,19 +230,19 @@ public class NWH_PlayerController : NWH_Movable
         isJumping = true;
 
         // Executes actions depending on performing a normal or a wall jump.
-        if (isOnGround)
+        if (isGrounded)
         {
             _curve = attributes.JumpCurve;
 
             // If moving, add extra X velocity to the player
-            if (isMoving) Velocity = new Vector2(velocity.x + (speed * isFacingRight.ToSign() * .25f), velocity.y);
+            //if (isMoving) Velocity = new Vector2(velocity.x + (speed * isFacingRight.ToSign() * .25f), velocity.y);
         }
         else
         {
             _curve = attributes.WallJumpCurve;
 
             // When performing a wall jump, add opposite side X velocity.
-            Velocity = new Vector2(velocity.x + (attributes.WallJumpXVelocity * (int)wallStuckState), velocity.y);
+            //Velocity = new Vector2(velocity.x + (attributes.WallJumpXVelocity * (int)wallStuckState), velocity.y);
         }
 
         // Perform jump over time following the associated curve
@@ -310,7 +303,6 @@ public class NWH_PlayerController : NWH_Movable
      *******     MOVEMENTS     *******
      ********************************/
 
-
     /// <summary>
     /// Resets base movement speed.
     /// </summary>
@@ -350,12 +342,12 @@ public class NWH_PlayerController : NWH_Movable
         base.Start();
 
         // Get attributes values
-        fallMinVelocity = attributes.FallMinVelocity;
         speed = attributes.SpeedCurve[0].value;
     }
 
-    private void Update()
+    void Update()
     {
+        Velocity = new Vector2(velocity.x, velocity.y + Physics2D.gravity.y * Time.deltaTime);
         CheckActions();
     }
     #endregion
