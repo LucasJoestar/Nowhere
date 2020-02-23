@@ -1,11 +1,15 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-public class NWH_PlayerController : NWH_Movable
+public class PlayerController : Movable
 {
     #region Fields / Properties
 
     #region Constants
+    /*********************************
+     *******     CONSTANTS     *******
+     ********************************/
+
     /// <summary>
     /// Amount of time after which speed should be reset when not moving.
     /// </summary>
@@ -27,7 +31,7 @@ public class NWH_PlayerController : NWH_Movable
     /// <summary>
     /// Player controller attributes, stored in a scriptable object.
     /// </summary>
-    [SerializeField] protected NWH_PlayerController_Attributes  attributes =        null;
+    [SerializeField] protected PlayerControllerAttributes  attributes =        null;
 
 
     /// <summary>
@@ -87,7 +91,7 @@ public class NWH_PlayerController : NWH_Movable
     protected float         notMovingTime =     0;
 
     /// <summary>
-    /// Time used to get current speed value according to <see cref="NWH_PlayerController_Attributes.SpeedCurve"/>.
+    /// Time used to get current speed value according to <see cref="PlayerControllerAttributes.SpeedCurve"/>.
     /// </summary>
     protected float         speedCurveTime =    0;
     #endregion
@@ -254,10 +258,10 @@ public class NWH_PlayerController : NWH_Movable
         while (Input.GetKey(KeyCode.Space))
         {
             // Move up
-            Velocity = new Vector2(velocity.x, velocity.y + _curve.Evaluate(_time));
+            Move(new Vector2(0, _curve.Evaluate(_time)));
 
             if (_time == _limit) break;
-
+            
             yield return null;
             _time = Mathf.Min(_time + Time.deltaTime, _limit);
         }
@@ -283,7 +287,7 @@ public class NWH_PlayerController : NWH_Movable
         while (true)
         {
             // Move in direction of the facing side
-            DoPerformMovement(new Vector2(attributes.SlideCurve.Evaluate(_time) * isFacingRight.ToSign(), 0));
+            //PerformMovement(new Vector2(attributes.SlideCurve.Evaluate(_time) * isFacingRight.ToSign(), 0));
 
             if (_time == _limit) break;
 
@@ -347,7 +351,6 @@ public class NWH_PlayerController : NWH_Movable
 
     void Update()
     {
-        Velocity = new Vector2(velocity.x, velocity.y + Physics2D.gravity.y * Time.deltaTime);
         CheckActions();
     }
     #endregion

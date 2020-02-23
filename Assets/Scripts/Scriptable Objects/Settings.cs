@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "Settings", menuName = "Datas/Settings", order = 50)]
-public class NWH_Settings : ScriptableObject
+public class Settings : ScriptableObject
 {
     #region Image & Video
     // Everything about image & video settings will be stocked here

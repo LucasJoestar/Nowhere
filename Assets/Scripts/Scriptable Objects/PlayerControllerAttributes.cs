@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
 [CreateAssetMenu(fileName = "PlayerControllerAttributes", menuName = "Datas/Player Controller Attributes", order = 50)]
-public class NWH_PlayerController_Attributes : ScriptableObject
+public class PlayerControllerAttributes : ScriptableObject
 {
     #region Animation Curves
     /**********************************

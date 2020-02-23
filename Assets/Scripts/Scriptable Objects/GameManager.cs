@@ -1,45 +1,18 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 #if UNITY_EDITOR
 using System.IO;
 using UnityEditor;
 #endif
 
-public class NWH_GameManager : ScriptableObject
+public class GameManager : ScriptableObject
 {
     #region Constants
     /*********************************
      *******     CONSTANTS     *******
      ********************************/
 
-    private const string FILE_PATH = "GameManager";
-    #endregion
-
-    #region Fields / Properties
-    /********************************
-     ********     FIELDS     ********
-     *******************************/
-
-    /// <summary>Backing field for <see cref="Settings"/>.</summary>
-    [SerializeField]
-    private NWH_Settings        settings =      null;
-
-    /// <summary>
-    /// Game update mode order
-    /// </summary>
-    [SerializeField]
-    private NWH_UpdateOrder     updateOrder =   new NWH_UpdateOrder();
-
-
-    /********************************
-     ******     PROPERTIES     ******
-     *******************************/
-
-    /// <summary>
-    /// Settings scriptable object of the game.
-    /// </summary>
-    public NWH_Settings Settings { get { return settings; } }
+    private const string        FILE_PATH =     "GameManager";
     #endregion
 
     #region Singleton
@@ -50,7 +23,33 @@ public class NWH_GameManager : ScriptableObject
     /// <summary>
     /// Singleton instance of this class.
     /// </summary>
-    public static NWH_GameManager   I =     null;
+    public static GameManager   Instance    { get; private set; } =     null;
+    #endregion
+
+    #region Fields / Properties
+    /********************************
+     ********     FIELDS     ********
+     *******************************/
+
+    /// <summary>Backing field for <see cref="Settings"/>.</summary>
+    [SerializeField]
+    private Settings            settings =                              null;
+
+    /// <summary>
+    /// Update system used for the game.
+    /// </summary>
+    [SerializeField]
+    private UpdateSystem        updateOrder =                           null;
+
+
+    /********************************
+     ******     PROPERTIES     ******
+     *******************************/
+
+    /// <summary>
+    /// Settings scriptable object of the game.
+    /// </summary>
+    public Settings             Settings    { get { return settings; } }
     #endregion
 
     #region Methods
@@ -64,9 +63,8 @@ public class NWH_GameManager : ScriptableObject
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     public static void LoadInstance()
     {
-        I = Resources.Load<NWH_GameManager>(FILE_PATH);
-
-        if (!I) Debug.LogError($"Error ! No Game Manager found on the project. Please place it in a Resources folder at path {FILE_PATH}.asset");
+        Instance = Resources.Load<GameManager>(FILE_PATH);
+        if (!Instance) Debug.LogError($"Error ! No Game Manager found on the project. Please place it in a Resources folder at path \"{FILE_PATH}.asset\"");
     }
 
     /// <summary>
@@ -75,8 +73,12 @@ public class NWH_GameManager : ScriptableObject
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     public static void InitializeGame()
     {
+        // Creates a new game object for game logic
+        GameObject _gameLogic = new GameObject("[GAME LOGIC]");
+        DontDestroyOnLoad(_gameLogic);
+
         // Create game update system
-        NWH_UpdateSystem.CreateInstance(I.updateOrder.UpdateModes);
+        UpdateManager.CreateInstance(Instance.updateOrder.UpdateModes, _gameLogic);
     }
 
 
@@ -98,7 +100,7 @@ public class NWH_GameManager : ScriptableObject
         // Get first GameManager if existing...
         if (_gameManagers.Length > 0)
         {
-            _gameManager = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(_gameManagers[0]), typeof(NWH_GameManager));
+            _gameManager = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(_gameManagers[0]), typeof(GameManager));
         }
         // ... Or create one if not
         else
@@ -118,8 +120,8 @@ public class NWH_GameManager : ScriptableObject
 
             _path = $"{Path.Combine("Assets", _path, Path.GetFileName(FILE_PATH))}.asset";
 
-            AssetDatabase.CreateAsset(CreateInstance<NWH_GameManager>(), _path);
-            _gameManager = AssetDatabase.LoadAssetAtPath(_path, typeof(NWH_GameManager));
+            AssetDatabase.CreateAsset(CreateInstance<GameManager>(), _path);
+            _gameManager = AssetDatabase.LoadAssetAtPath(_path, typeof(GameManager));
         }
         
         // Select the GameManager in the project window
