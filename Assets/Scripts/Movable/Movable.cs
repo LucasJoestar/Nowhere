@@ -10,7 +10,7 @@ public class Movable : MonoBehaviour
      *******     EVENTS     *******
      *****************************/
 
-    public event Action<RaycastHit2D[]> OnMovementHitCallback = null;
+    public event Action<RaycastHit2D[]>     OnMovementHitCallback =         null;
     #endregion
 
     #region Fields / Properties
@@ -23,7 +23,7 @@ public class Movable : MonoBehaviour
     /// <summary>
     /// Maximum distance when casting collider to detect collision from closest hit.
     /// </summary>
-    protected const float           castMaxDistanceDetection =      .01f;
+    protected const float                   castMaxDistanceDetection =      .001f;
     #endregion
 
     #region Parameters
@@ -33,47 +33,47 @@ public class Movable : MonoBehaviour
 
     /// <summary>Backing field for <see cref="IsAwake"/>.</summary>
     [SerializeField]
-    protected bool                  isAwake =                       true;
+    protected bool                          isAwake =                       true;
 
     /// <summary>Backing field for <see cref="IsFacingRight"/>.</summary>
     [SerializeField]
-    protected bool                  isFacingRight =                 true;
+    protected bool                          isFacingRight =                 true;
 
     /// <summary>Backing field for <see cref="IsGrounded"/>.</summary>
     [SerializeField]
-    protected bool                  isGrounded =                    false;
+    protected bool                          isGrounded =                    false;
 
     /// <summary>Backing field for <see cref="UseGravity"/>.</summary>
     [SerializeField]
-    protected bool                  useGravity =                    true;
+    protected bool                          useGravity =                    true;
 
 
     /// <summary>Backing field for <see cref="Speed"/>.</summary>
     [SerializeField]
-    protected float                 speed =                         1;
+    protected float                         speed =                         1;
 
     /// <summary>Backing field for <see cref="SpeedCoef"/>.</summary>
     [SerializeField]
-    protected float                 speedCoef =                     1;
+    protected float                         speedCoef =                     1;
 
 
     /// <summary>
     /// Physics collider of the object.
     /// </summary>
     [SerializeField]
-    protected new Collider2D        collider =                      null;
+    protected new Collider2D                collider =                      null;
 
     /// <summary>
     /// Rigidbody of the object (should be Kinematic).
     /// This should only be used by moving its position to update the collider one.
     /// </summary>
     [SerializeField]
-    protected new Rigidbody2D       rigidbody =                     null;
+    protected new Rigidbody2D               rigidbody =                     null;
 
 
     /// <summary>Backing field for <see cref="Velocity"/>.</summary>
     [SerializeField]
-    protected Vector2               velocity =                      Vector2.zero;
+    protected Vector2                       velocity =                      Vector2.zero;
 
 
     /**********************************
@@ -346,15 +346,12 @@ public class Movable : MonoBehaviour
         // If no velocity, return
         if (velocity == Vector2.zero) return velocity;
 
-        // Calcul movement collisions and refresh position if needed
+        // Calcul movement collisions and refresh position
         Vector2 _movement = CalculVelocityCollisions(out RaycastHit2D[] _hitBuffer);
-        if (_movement != Vector2.zero)
-        {
-            rigidbody.position += _movement;
-            RefreshPosition();
-        }
+        rigidbody.position += _movement;
+        RefreshPosition();
 
-        // Set grounded value
+        // Set grounded value if using gravity
         if (useGravity)
         {
             bool _isGrounded = _hitBuffer.Any(h => h.normal.y == 1);
@@ -383,21 +380,64 @@ public class Movable : MonoBehaviour
         // Initialize hit buffer
         _hitResults = new RaycastHit2D[16];
 
-        // Cast collider, and return modified velocity if hit something
+        // Cast collider and get hit informations
         int _amount = CastCollider(velocity, _hitResults, out float _distance);
-        if (_amount > 0)
+
+        // If nothing is hit, just return velocity
+        if (_amount == 0)
         {
-            Vector2 _extraVelocity = velocity;
-            for (int _i = 0; _i < _amount; _i++)
+            _hitResults = new RaycastHit2D[] { };
+            return velocity;
+        }
+
+        // Get movement before collision
+        Vector2 _movement = velocity.normalized * _distance;
+        Vector2 _extraVelocity = velocity.normalized * (velocity.magnitude - _distance);
+        for (int _i = 0; _i < _amount; _i++)
+        {
+            // Reduce extra movement depending on impact normals
+            if ((_extraVelocity.x != 0) && (_hitResults[_i].normal.x != 0) && (Math.Sign(_extraVelocity.x) != Mathf.Sign(_hitResults[_i].normal.x)))
             {
-                // Do extra cast here
+                _extraVelocity.x = 0;
+                if (_extraVelocity.y == 0) break;
+            }
+            if ((_extraVelocity.y != 0) && (_hitResults[_i].normal.y != 0) && (Math.Sign(_extraVelocity.y) != Mathf.Sign(_hitResults[_i].normal.y)))
+            {
+                _extraVelocity.y = 0;
+                if (_extraVelocity.x == 0) break;
             }
         }
 
-        Array.Resize(ref _hitResults, _amount);
+        // If no extra movement is necessary, just resize hit array
+        if (_extraVelocity == Vector2.zero) Array.Resize(ref _hitResults, _amount);
+        // Otherwise perform extra cast, then add new movement and hit results
+        else
+        {
+            RaycastHit2D[] _extraHitResults = new RaycastHit2D[16];
+            int _extraAmount = CastCollider(_extraVelocity, _extraHitResults, out _distance);
 
-        if (_amount > 0) return velocity.normalized * _distance;
-        return velocity;
+            // If hit nothing, just add extra movement and resize initial hits array
+            if (_amount == 0)
+            {
+                _movement += _extraVelocity;
+                Array.Resize(ref _hitResults, _amount);
+            }
+            else
+            {
+                // Add new closest hit movement
+                _movement += _extraVelocity.normalized * _distance;
+
+                // Then, add new cast hits
+                RaycastHit2D[] _finalHitResults = new RaycastHit2D[_amount + _extraAmount];
+                for (int _i = 0; _i < _amount; _i++) _finalHitResults[_i] = _hitResults[_i];
+                for (int _i = 0; _i < _extraAmount; _i++) _finalHitResults[_i + _amount] = _extraHitResults[_i];
+
+                _hitResults = _finalHitResults;
+            }
+        }
+
+        // Return final movement
+        return _movement;
     }
 
     /// <summary>
