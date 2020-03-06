@@ -13,7 +13,7 @@ public class PlayerController : Movable
     /// <summary>
     /// Amount of time after which speed should be reset when not moving.
     /// </summary>
-    public const float  RESET_SPEED_TIME =  .2f;
+    public const float                      SpeedResetTime =    .2f;
     #endregion
 
     #region Parameters
@@ -22,22 +22,26 @@ public class PlayerController : Movable
      *********************************/
 
     /// <summary>Backing field for <see cref="IsJumping"/>.</summary>
-    [SerializeField] protected bool                             isJumping =         false;
+    [SerializeField]
+    protected bool                          isJumping =         false;
 
     /// <summary>Backing field for <see cref="IsSliding"/>.</summary>
-    [SerializeField] protected bool                             isSliding =         false;
+    [SerializeField]
+    protected bool                          isSliding =         false;
 
 
     /// <summary>
     /// Player controller attributes, stored in a scriptable object.
     /// </summary>
-    [SerializeField] protected PlayerControllerAttributes  attributes =        null;
+    [SerializeField]
+    protected PlayerControllerAttributes    attributes =        null;
 
 
     /// <summary>
     /// Indicates if the player is currently stuck to a wall, and if so on which side.
     /// </summary>
-    [SerializeField] protected WallStuckState                   wallStuckState =    0;
+    [SerializeField]
+    protected WallStuckState                wallStuckState =    0;
 
 
     /**********************************
@@ -75,10 +79,10 @@ public class PlayerController : Movable
      *********************************/
 
     /// <summary>Stored coroutine of the <see cref="DoJump"/> method.</summary>
-    protected Coroutine     cDoJump =           null;
+    protected Coroutine     doJumpCoroutine =           null;
 
     /// <summary>Stored coroutine of the <see cref="DoSlide"/> method.</summary>
-    protected Coroutine     cDoSlide =          null;
+    protected Coroutine     doSlideCoroutine =          null;
 
 
     /**********************************
@@ -86,14 +90,9 @@ public class PlayerController : Movable
      *********************************/
 
     /// <summary>
-    /// Time since player has not moved.
+    /// Time used to get current speed value according to <see cref="PlayerControllerAttributes.GroundSpeedCurve"/>.
     /// </summary>
-    protected float         notMovingTime =     0;
-
-    /// <summary>
-    /// Time used to get current speed value according to <see cref="PlayerControllerAttributes.SpeedCurve"/>.
-    /// </summary>
-    protected float         speedCurveTime =    0;
+    protected float         speedCurveTime =            0;
     #endregion
 
     #endregion
@@ -107,51 +106,179 @@ public class PlayerController : Movable
      *********     INPUTS     *********
      *********************************/
 
+    /// <summary>
+    /// Check player inputs and execute movement or other actions.
+    /// </summary>
+    protected void CheckInputs()
+    {
+        // Executes player actions and then move them
+        CheckActions();
+        CheckMovement();
+    }
+
+    /// <summary>
+    /// Executes actions related to player inputs.
+    /// </summary>
     protected void CheckActions()
     {
+        // Jump if pressing associated key
         if (Input.GetKeyDown(KeyCode.Space)) Jump();
     }
 
+    /// <summary>
+    /// Move the player according to input movement.
+    /// </summary>
     protected void CheckMovement()
     {
-        // If no movement, skip this frame
-        float _movement = _movement = Input.GetAxis("Horizontal");
+        // If no player movement, decelerate while speed is not null
+        float _movement = Input.GetAxis("Horizontal");
         if (_movement == 0)
         {
-            // Reset speed after not moving during a certain amount of time
-            if (notMovingTime < RESET_SPEED_TIME)
-            {
-                notMovingTime += Time.deltaTime;
-                if (notMovingTime >= RESET_SPEED_TIME) ResetSpeed();
-            }
-
+            if (speed != 0) Decelerate();
             return;
         }
-        if (notMovingTime > 0) notMovingTime = 0;
+        else Accelerate();
 
-        // Increase speed according to the associated curve.
-        if (speedCurveTime < attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time)
-        {
-            speedCurveTime = Mathf.Min(speedCurveTime + Time.deltaTime, attributes.SpeedCurve[attributes.SpeedCurve.length - 1].time);
-
-            speed = attributes.SpeedCurve.Evaluate(speedCurveTime);
-        }
-
-        /*if (!isGrounded)
-        {
-            _movement /= Time.deltaTime * speed;
-            if (_movement > 0)
-            {
-                if (velocity.x >= _movement) return;
-            }
-            else if (velocity.x <= _movement) return;
-
-            Velocity = new Vector2(velocity.x + ((_movement - velocity.x) * (speed * Time.deltaTime)), velocity.y);
-            return;
-        }*/
-
-        MoveInDirection(new Vector2(_movement, 0));
+        // Move the object according to movement input
+        Move(new Vector2(_movement * GetMovementSpeed(), 0));
     }
+    #endregion
+
+    #region Speed
+    /*********************************
+     *********     SPEED     *********
+     ********************************/
+
+    /// <summary>
+    /// Increase player speed if below max value.
+    /// </summary>
+    protected void Accelerate()
+    {
+        // Increase speed according to the associated curve.
+        AnimationCurve _curve = isGrounded ? attributes.GroundSpeedCurve : attributes.AirSpeedCurve;
+
+        if (speed < _curve[_curve.length - 1].value)
+        {
+            speedCurveTime = Mathf.Min(speedCurveTime + Time.deltaTime, _curve[_curve.length - 1].time);
+
+            speed = _curve.Evaluate(speedCurveTime);
+        }
+    }
+
+    /// <summary>
+    /// Decrease player speed if greater than zero.
+    /// </summary>
+    protected void Decelerate()
+    {
+        // Decrease speed with a deceleration force
+        speed = Mathf.MoveTowards(speed, 0, attributes.SpeedDecelerationForce * Time.deltaTime);
+
+        // Reset speed curve time when reaching zero
+        if ((speed == 0) && (speedCurveTime > 0)) speedCurveTime = 0;
+    }
+
+    /// <summary>
+    /// Reset base movement speed.
+    /// </summary>
+    public void ResetSpeed()
+    {
+        speedCurveTime = 0;
+        speed = 0;
+    }
+    #endregion
+
+    #region Movements
+    /*********************************
+     *******     MOVEMENTS     *******
+     ********************************/
+
+    /// <summary>
+    /// Add an external force to this object movement.
+    /// </summary>
+    /// <param name="_force">Force to add to the object.</param>
+    public override void AddForce(Vector2 _force)
+    {
+        base.AddForce(_force);
+    }
+
+    /// <summary>
+    /// Makes the object move on its own.
+    /// This do some extra things in addition to the <see cref="AddForce(Vector2)"/>
+    /// method like flipping the object and other things due to when the object
+    /// move on its own and not pushed by an external force.
+    /// 
+    /// Override this method do add extra behaviours.
+    /// </summary>
+    /// <param name="_movement">Movement to perform.</param>
+    protected override void Move(Vector2 _movement)
+    {
+        base.Move(_movement);
+    }
+
+
+    /// <summary>
+    /// Apply stored velocity and move the object.
+    /// </summary>
+    /// <returns>Returns final movement.</returns>
+    /*protected override Vector2 ApplyVelocity()
+    {
+        // Manipulate force and movement according to if grounded or not
+        // Decelerate movement
+        if (((lastMovement.x < 0) && (movement.x > lastMovement.x)) ||
+            ((lastMovement.x > 0) && (movement.x < lastMovement.x)))
+        {
+            // About-Turn
+            if ((movement.x != 0) && (Mathf.Sign(lastMovement.x) != Mathf.Sign(movement.x)))
+            {
+                if (isGrounded)
+                {
+                    movement.x = Mathf.MoveTowards(lastMovement.x, movement.x, GetMovementSpeed() * .1f);
+                }
+                else
+                {
+                    movement.x = Mathf.MoveTowards(lastMovement.x, movement.x, GetMovementSpeed() * .5f);
+                }
+            }
+            // Deceleration
+            else
+            {
+                movement.x = Mathf.MoveTowards(lastMovement.x, movement.x, Time.deltaTime * (isGrounded ? .4f : .3f));
+            }
+        }
+
+        Velocity = force + movement;
+        Vector2 _originalVelocity = velocity;
+        Vector2 _velocity = base.ApplyVelocity();
+        force.y = 0;
+        if (_velocity.x == 0)
+        {
+            force.x = 0;
+            movement.x = 0;
+        }
+
+        if (movement.x != 0)
+        {
+            if (force.x != 0)
+            {
+                if (Mathf.Sign(movement.x) != Mathf.Sign(force.x))
+                {
+                    force.x = Mathf.MoveTowards(force.x, 0, movement.x);
+                }
+            }
+        }
+        else if (force.x != 0)
+        {
+            if (!isGrounded)
+            {
+                force.x = Mathf.MoveTowards(force.x, 0, Time.deltaTime * 10);
+            }
+        }
+
+        // Reset movement
+        lastMovement = movement;
+        movement = Vector2.zero;
+        return _velocity;
+    }*/
     #endregion
 
     #region Special Moves
@@ -168,10 +295,10 @@ public class PlayerController : Movable
         // Return false if cannot jump
         if (!isGrounded && (wallStuckState == WallStuckState.None)) return false;
 
-        if (isJumping) StopCoroutine(cDoJump);
+        if (isJumping) StopCoroutine(doJumpCoroutine);
         StopSlide();
 
-        cDoJump = StartCoroutine(DoJump());
+        doJumpCoroutine = StartCoroutine(DoJump());
         return true;
     }
 
@@ -184,7 +311,7 @@ public class PlayerController : Movable
         // Return false if cannot slide
         if (!isGrounded || isJumping || isSliding) return false;
 
-        cDoSlide = StartCoroutine(DoSlide());
+        doSlideCoroutine = StartCoroutine(DoSlide());
         return true;
     }
 
@@ -198,8 +325,8 @@ public class PlayerController : Movable
         if (!isJumping) return false;
 
         isJumping = false;
-        StopCoroutine(cDoJump);
-        cDoJump = null;
+        StopCoroutine(doJumpCoroutine);
+        doJumpCoroutine = null;
 
         return true;
     }
@@ -213,8 +340,8 @@ public class PlayerController : Movable
         if (!isSliding) return false;
 
         isSliding = false;
-        StopCoroutine(cDoSlide);
-        cDoSlide = null;
+        StopCoroutine(doSlideCoroutine);
+        doSlideCoroutine = null;
 
         return true;
     }
@@ -267,7 +394,7 @@ public class PlayerController : Movable
         }
 
         isJumping = false;
-        cDoJump = null;
+        doJumpCoroutine = null;
 
         yield break;
     }
@@ -296,24 +423,9 @@ public class PlayerController : Movable
         }
 
         isSliding = false;
-        cDoSlide = null;
+        doSlideCoroutine = null;
 
         yield break;
-    }
-    #endregion
-
-    #region Movements
-    /*********************************
-     *******     MOVEMENTS     *******
-     ********************************/
-
-    /// <summary>
-    /// Resets base movement speed.
-    /// </summary>
-    public void ResetSpeed()
-    {
-        speedCurveTime = 0;
-        speed = attributes.SpeedCurve[0].value;
     }
     #endregion
 
@@ -323,35 +435,35 @@ public class PlayerController : Movable
     // Awake is called when the script instance is being loaded
     protected override void Awake()
 	{
-        base.Awake();
-
         // Destroy script if no attribute is linked to it.
         if (!attributes)
         {
-            Debug.LogError($"Alert ! No Attributes detected on the Player Controller \"{name}\" ! The script is being destroyed...");
-
             Destroy(this);
             return;
         }
+
+        // Execute base class awake
+        base.Awake();
 	}
 
-    private void FixedUpdate()
+    // Destroying the attached Behaviour will result in the game or Scene receiving OnDestroy
+    protected override void OnDestroy()
     {
-        CheckMovement();
+        // Execute base class on destroy
+        base.OnDestroy();
+
+        // Unsubscribe update methods
+        UpdateManager.UnsubscribeToUpdate(CheckInputs, UpdateModeTimeline.Update);
     }
 
     // Start is called before the first frame update
     protected override void Start()
     {
+        // Execute base class start
         base.Start();
 
-        // Get attributes values
-        speed = attributes.SpeedCurve[0].value;
-    }
-
-    void Update()
-    {
-        CheckActions();
+        // Subscribe update methods
+        UpdateManager.SubscribeToUpdate(CheckInputs, UpdateModeTimeline.Update);
     }
     #endregion
 

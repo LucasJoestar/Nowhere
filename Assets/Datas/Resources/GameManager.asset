@@ -12,5 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2d2d12b536b6a8e4a8d5008c24db015e, type: 3}
   m_Name: GameManager
   m_EditorClassIdentifier: 
-  settings: {fileID: 11400000, guid: d23891830d7703d4d9374e7a953b9a8b, type: 2}
+  programSettings: {fileID: 11400000, guid: d23891830d7703d4d9374e7a953b9a8b, type: 2}
   updateOrder: {fileID: 11400000, guid: 8ce22bafb43a8f14dadf1cf38a78ec46, type: 2}

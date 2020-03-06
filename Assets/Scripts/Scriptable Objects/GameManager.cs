@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using EnhancedEditor;
+using UnityEngine;
 
 #if UNITY_EDITOR
 using System.IO;
@@ -12,7 +13,7 @@ public class GameManager : ScriptableObject
      *******     CONSTANTS     *******
      ********************************/
 
-    private const string        FILE_PATH =     "GameManager";
+    private const string            FILE_PATH =         "GameManager";
     #endregion
 
     #region Singleton
@@ -23,7 +24,7 @@ public class GameManager : ScriptableObject
     /// <summary>
     /// Singleton instance of this class.
     /// </summary>
-    public static GameManager   Instance    { get; private set; } =     null;
+    public static GameManager       Instance            { get; private set; } =     null;
     #endregion
 
     #region Fields / Properties
@@ -31,15 +32,15 @@ public class GameManager : ScriptableObject
      ********     FIELDS     ********
      *******************************/
 
-    /// <summary>Backing field for <see cref="Settings"/>.</summary>
-    [SerializeField]
-    private Settings            settings =                              null;
+    /// <summary>Backing field for <see cref="ProgramSettings"/>.</summary>
+    [SerializeField, Required]
+    private ProgramSettings         programSettings =   null;
 
     /// <summary>
     /// Update system used for the game.
     /// </summary>
-    [SerializeField]
-    private UpdateSystem        updateOrder =                           null;
+    [SerializeField, Required]
+    private UpdateSystem            updateOrder =       null;
 
 
     /********************************
@@ -47,9 +48,9 @@ public class GameManager : ScriptableObject
      *******************************/
 
     /// <summary>
-    /// Settings scriptable object of the game.
+    /// Program settings scriptable object of the game.
     /// </summary>
-    public Settings             Settings    { get { return settings; } }
+    public static ProgramSettings   ProgramSettings    { get { return Instance?.programSettings; } }
     #endregion
 
     #region Methods

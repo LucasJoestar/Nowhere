@@ -1,18 +1,10 @@
-﻿using System;
-using System.Linq;
+﻿using EnhancedEditor;
+using System;
 using UnityEngine;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class Movable : MonoBehaviour
 {
-    #region Events
-    /******************************
-     *******     EVENTS     *******
-     *****************************/
-
-    public event Action<RaycastHit2D[]>     OnMovementHitCallback =         null;
-    #endregion
-
     #region Fields / Properties
 
     #region Constants
@@ -32,19 +24,19 @@ public class Movable : MonoBehaviour
      *********************************/
 
     /// <summary>Backing field for <see cref="IsAwake"/>.</summary>
-    [SerializeField]
+    [SerializeField, PropertyField]
     protected bool                          isAwake =                       true;
 
     /// <summary>Backing field for <see cref="IsFacingRight"/>.</summary>
-    [SerializeField]
+    [SerializeField, PropertyField]
     protected bool                          isFacingRight =                 true;
 
     /// <summary>Backing field for <see cref="IsGrounded"/>.</summary>
-    [SerializeField]
+    [SerializeField, PropertyField]
     protected bool                          isGrounded =                    false;
 
     /// <summary>Backing field for <see cref="UseGravity"/>.</summary>
-    [SerializeField]
+    [SerializeField, PropertyField]
     protected bool                          useGravity =                    true;
 
 
@@ -53,27 +45,30 @@ public class Movable : MonoBehaviour
     protected float                         speed =                         1;
 
     /// <summary>Backing field for <see cref="SpeedCoef"/>.</summary>
-    [SerializeField]
+    [SerializeField, PropertyField]
     protected float                         speedCoef =                     1;
 
 
     /// <summary>
     /// Physics collider of the object.
     /// </summary>
-    [SerializeField]
+    [SerializeField, Required]
     protected new Collider2D                collider =                      null;
 
     /// <summary>
     /// Rigidbody of the object (should be Kinematic).
     /// This should only be used by moving its position to update the collider one.
     /// </summary>
-    [SerializeField]
+    [SerializeField, Required]
     protected new Rigidbody2D               rigidbody =                     null;
 
 
-    /// <summary>Backing field for <see cref="Velocity"/>.</summary>
+    /// <summary>
+    /// Velocity system of the object.
+    /// Used to separate forces from instant forces and object movement.
+    /// </summary>
     [SerializeField]
-    protected Vector2                       velocity =                      Vector2.zero;
+    protected Velocity                      velocity =                      new Velocity();
 
 
     /**********************************
@@ -88,6 +83,10 @@ public class Movable : MonoBehaviour
         get { return isAwake; }
         set
         {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying) return;
+            #endif
+
             if (value != isAwake)
             {
                 if (value) UpdateManager.SubscribeToUpdate(UpdateMovable, UpdateModeTimeline.EndOfFrame);
@@ -130,6 +129,10 @@ public class Movable : MonoBehaviour
         get { return useGravity; }
         set
         {
+            #if UNITY_EDITOR
+            if (!Application.isPlaying) return;
+            #endif
+
             if (value != useGravity)
             {
                 if (value) UpdateManager.SubscribeToUpdate(AddGravity, UpdateModeTimeline.Update);
@@ -165,24 +168,22 @@ public class Movable : MonoBehaviour
     /// <summary>
     /// Movement of the object during this frame.
     /// </summary>
-    public Vector2  Velocity
-    {
-        get { return velocity; }
-        protected set
-        {
-            velocity = value;
-        }
-    }
+    public Vector2  Velocity    { get { return velocity.GetVelocity(); } }
     #endregion
 
-    #region Coroutines & Memory
-    /**********************************
-     *******     COROUTINES     *******
-     *********************************/
+    #region Events
+    /******************************
+     *******     EVENTS     *******
+     *****************************/
 
-    // Nothing to see here...
+    /// <summary>
+    /// Called when hitting colliders during movements,
+    /// with an array of all raycast hits as parameter.
+    /// </summary>
+    public event Action<RaycastHit2D[]>     OnMovementHitCallback =     null;
+    #endregion
 
-
+    #region Memory
     /**********************************
      *********     MEMORY     *********
      *********************************/
@@ -236,6 +237,10 @@ public class Movable : MonoBehaviour
     #endregion
 
     #region Speed
+    /*********************************
+     *********     SPEED     *********
+     ********************************/
+
     /// <summary>
     /// Add a coefficient to this object speed.
     /// </summary>
@@ -257,52 +262,42 @@ public class Movable : MonoBehaviour
 
     #region Movements
     /**************************************
-     *******     MOV. MEDIATORS     *******
+     *****     VELOCITY MEDIATORS     *****
      *************************************/
 
     /// <summary>
-    /// Add a force to this object movement.
+    /// Add an external force to this object movement
+    /// that will be reduce over time.
+    /// 
+    /// Override this method to add extra behaviours.
     /// </summary>
-    /// <param name="_force">Movement force to add to the object.</param>
-    public void AddForce(Vector2 _force) => Velocity += _force;
+    /// <param name="_force">Force to add to this object movement.</param>
+    public virtual void AddForce(Vector2 _force) => velocity.Force += _force;
+
+    /// <summary>
+    /// Add an external force to this object movement
+    /// for this frame only.
+    /// 
+    /// Override this method to add extra behaviours.
+    /// </summary>
+    /// <param name="_instantForce">Force to add to this object movement.</param>
+    public virtual void AddInstantForce(Vector2 _instantForce) => velocity.InstantForce += _instantForce;
 
     /// <summary>
     /// Add gravity force to the object.
     /// </summary>
-    protected void AddGravity() => AddForce(new Vector2(0, Physics2D.gravity.y * Time.deltaTime));
-
-
-    /// <summary>
-    /// Move the object in a given direction.
-    /// </summary>
-    /// <param name="_dir">Direction to move the object to.</param>
-    public virtual void MoveInDirection(Vector2 _dir) => Move(_dir.normalized * GetMovementSpeed());
-
-    /// <summary>
-    /// Move the object in direction of a given position.
-    /// </summary>
-    /// <param name="_position">Position to move the object to.</param>
-    public virtual void MoveTo(Vector2 _position)
+    protected void AddGravity()
     {
-        float _speed = GetMovementSpeed();
-        Vector2 _movement = _position - (Vector2)transform.position;
-        if (_movement.magnitude > _speed) _movement = _movement.normalized * _speed;
+        // Only add gravity force if needed
+        if (velocity.Force.y <= GameManager.ProgramSettings.GravityMinYForce) return;
 
-        Move(_movement);
+        AddForce(new Vector2(0, Mathf.Max(Physics2D.gravity.y * Time.deltaTime, GameManager.ProgramSettings.GravityMinYForce - velocity.Force.y)));
     }
 
-    /// <summary>
-    /// Makes the object travel until reaching a given position.
-    /// </summary>
-    /// <param name="_position">Position to travel to.</param>
-    public void TravelTo(Vector2 _position)
-    {
-        // Implement travel here
-    }
 
     /// <summary>
     /// Makes the object move on its own.
-    /// This do some extra things in addition to the <see cref="AddForce(Vector2)"/>
+    /// This do some extra things in addition to the <see cref="AddVelocity(Vector2)"/>
     /// method like flipping the object and other things due to when the object
     /// move on its own and not pushed by an external force.
     /// 
@@ -314,58 +309,48 @@ public class Movable : MonoBehaviour
         // Flip object if not facing movement direction
         if ((_movement.x != 0) && (Mathf.Sign(_movement.x) != isFacingRight.ToSign())) Flip();
 
-        AddForce(_movement);
+        velocity.Movement += _movement;
     }
 
 
-    /**************************************
-     ******     MOV. SYSTEM COGS     ******
-     *************************************/
+    /**********************************
+     ******     CALCULATIONS     ******
+     *********************************/
 
     /// <summary>
-    /// Set this object position.
-    /// Use this instead of setting <see cref="Transform.position"/>.
+    /// Calculates new velocity value after a movement.
     /// </summary>
-    /// <param name="_position">New position of the object.</param>
-    public void SetPosition(Vector2 _position)
+    /// <param name="_hits">All objects hit during travel.</param>
+    protected virtual void CalculVelocityAfterMovement(RaycastHit2D[] _hits)
     {
-        // Do nothing if position has not changed
-        if (rigidbody.position == _position) return;
-
-        // Set rigidbody and refresh position
-        rigidbody.position = _position;
-        RefreshPosition();
-    }
-
-    /// <summary>
-    /// Apply stored velocity and move the object.
-    /// </summary>
-    /// <returns>Returns final movement.</returns>
-    protected Vector2 ApplyVelocity()
-    {
-        // If no velocity, return
-        if (velocity == Vector2.zero) return velocity;
-
-        // Calcul movement collisions and refresh position
-        Vector2 _movement = CalculVelocityCollisions(out RaycastHit2D[] _hitBuffer);
-        rigidbody.position += _movement;
-        RefreshPosition();
-
-        // Set grounded value if using gravity
-        if (useGravity)
+        // Reset force if hit something on force movement
+        foreach (RaycastHit2D _hit in _hits)
         {
-            bool _isGrounded = _hitBuffer.Any(h => h.normal.y == 1);
-            if (_isGrounded != isGrounded) IsGrounded = _isGrounded;
+            if (_hit.normal.x != 0) velocity.Force.x = 0;
+            if (_hit.normal.y != 0) velocity.Force.y = 0;
+
+            if (velocity.Force == Vector2.zero) break;
         }
 
-        // Call hit method if collision
-        if (_hitBuffer.Length > 0) OnMovementHit(_hitBuffer);
+        // Slowly decrease force if not null
+        if (isGrounded && (velocity.Force.x != 0))
+        {
+            float _maxDelta = GameManager.ProgramSettings.GroundDecelerationForce * Time.deltaTime;
+            if ((velocity.Movement.x != 0) && (Mathf.Sign(velocity.Movement.x) != Mathf.Sign(velocity.Force.x)))
+            {
+                _maxDelta = Mathf.Max(_maxDelta, Mathf.Abs(velocity.Movement.x));
+            }
 
-        // Reset velocity and return movement
-        Velocity = Vector2.zero;
-        return _movement;
+            velocity.Force.x = Mathf.MoveTowards(velocity.Force.x, 0, _maxDelta);
+        }
+        if ((velocity.Force.y != 0) && (velocity.Movement.y != 0) && (Mathf.Sign(velocity.Movement.y) != Mathf.Sign(velocity.Force.y)))
+        {
+            velocity.Force.y = Mathf.MoveTowards(velocity.Force.y, 0, Time.deltaTime * Mathf.Abs(velocity.Movement.y));
+        }
+
+        // Reset instant force and movement
+        velocity.InstantForce = velocity.Movement = Vector2.zero;
     }
-
 
     /// <summary>
     /// Calculs object collisions and final movement from velocity.
@@ -377,22 +362,23 @@ public class Movable : MonoBehaviour
     /// <returns>Returns final object movement.</returns>
     protected virtual Vector2 CalculVelocityCollisions(out RaycastHit2D[] _hitResults)
     {
-        // Initialize hit buffer
+        // Cache velocity & initialize hit buffer
+        Vector2 _velocity = Velocity;
         _hitResults = new RaycastHit2D[16];
 
         // Cast collider and get hit informations
-        int _amount = CastCollider(velocity, _hitResults, out float _distance);
+        int _amount = CastCollider(_velocity, _hitResults, out float _distance);
 
         // If nothing is hit, just return velocity
         if (_amount == 0)
         {
             _hitResults = new RaycastHit2D[] { };
-            return velocity;
+            return _velocity;
         }
 
         // Get movement before collision
-        Vector2 _movement = velocity.normalized * _distance;
-        Vector2 _extraVelocity = velocity.normalized * (velocity.magnitude - _distance);
+        Vector2 _movement = _velocity.normalized * _distance;
+        Vector2 _extraVelocity = _velocity.normalized * (_velocity.magnitude - _distance);
         for (int _i = 0; _i < _amount; _i++)
         {
             // Reduce extra movement depending on impact normals
@@ -417,7 +403,7 @@ public class Movable : MonoBehaviour
             int _extraAmount = CastCollider(_extraVelocity, _extraHitResults, out _distance);
 
             // If hit nothing, just add extra movement and resize initial hits array
-            if (_amount == 0)
+            if (_extraAmount == 0)
             {
                 _movement += _extraVelocity;
                 Array.Resize(ref _hitResults, _amount);
@@ -476,6 +462,7 @@ public class Movable : MonoBehaviour
     /// </summary>
     protected void ExtractFromCollisions()
     {
+        bool _isGrounded = false;
         Collider2D[] _collisions = new Collider2D[16];
         int _count = collider.OverlapCollider(contactFilter, _collisions);
 
@@ -483,13 +470,75 @@ public class Movable : MonoBehaviour
         {
             ColliderDistance2D _distance = collider.Distance(_collisions[_i]);
             if (!_distance.isOverlapped) continue;
-
+            
+            // Check grounded status if using gravity
+            if (useGravity && _distance.normal.y < 0) _isGrounded = true;
             rigidbody.position += _distance.normal * _distance.distance;
         }
+
+        // Set grounded value if different
+        if (isGrounded != _isGrounded) SetGrounded(_isGrounded);
+    }
+
+    /// <summary>
+    /// Set object grounded status.
+    /// 
+    /// Override this method to add extra verifications before set,
+    /// like an additional cast for the player controller.
+    /// </summary>
+    /// <param name="_isGrounded">New grounded value.</param>
+    protected virtual void SetGrounded(bool _isGrounded) => IsGrounded = _isGrounded;
+
+
+    /**************************************
+     ******     MOV. SYSTEM COGS     ******
+     *************************************/
+
+    /// <summary>
+    /// Set this object position.
+    /// Use this instead of setting <see cref="Transform.position"/>.
+    /// </summary>
+    /// <param name="_position">New position of the object.</param>
+    public void SetPosition(Vector2 _position)
+    {
+        // Do nothing if position has not changed
+        if (rigidbody.position == _position) return;
+
+        // Set rigidbody and refresh position
+        rigidbody.position = _position;
+        RefreshPosition();
+    }
+
+    /// <summary>
+    /// Apply stored velocity and move the object.
+    /// </summary>
+    /// <returns>Returns final movement.</returns>
+    protected virtual Vector2 ApplyVelocity()
+    {
+        // If no velocity, return
+        if (Velocity == Vector2.zero) return Vector2.zero;
+
+        // Calcul movement collisions and refresh position
+        Vector2 _movement = CalculVelocityCollisions(out RaycastHit2D[] _hitBuffer);
+        Vector2 _lastPosition = rigidbody.position;
+
+        rigidbody.position += _movement;
+        RefreshPosition();
+
+        // Call hit method if collision
+        if (_hitBuffer.Length > 0) OnMovementHit(_hitBuffer);
+
+        // Set velocity and return real movement after position refresh
+        _movement = rigidbody.position - _lastPosition;
+
+        CalculVelocityAfterMovement(_hitBuffer);
+        return _movement;
     }
 
     /// <summary>
     /// Called when hitting colliders during movement.
+    /// 
+    /// Override this method to add extra behaviours and feedback.
     /// </summary>
     /// <param name="_hits">Raycast hits of touched colliders during movement.</param>
     protected virtual void OnMovementHit(RaycastHit2D[] _hits) => OnMovementHitCallback?.Invoke(_hits);
@@ -539,6 +588,7 @@ public class Movable : MonoBehaviour
     // Awake is called when the script instance is being loaded
     protected virtual void Awake()
 	{
+        // Get missing components
         if (!collider) collider = GetComponent<Collider2D>();
         if (!rigidbody) rigidbody = GetComponent<Rigidbody2D>();
     }

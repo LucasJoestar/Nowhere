@@ -19,9 +19,14 @@ public class PlayerControllerAttributes : ScriptableObject
     public AnimationCurve   SlideCurve =            null;
 
     /// <summary>
-    /// X axis movement speed over time.
+    /// X axis movement speed over time when grounded.
     /// </summary>
-    public AnimationCurve   SpeedCurve =            null;
+    public AnimationCurve   GroundSpeedCurve =            null;
+
+    /// <summary>
+    /// X axis movement speed over time when in air.
+    /// </summary>
+    public AnimationCurve   AirSpeedCurve =         null;
 
     /// <summary>
     /// Wall jump Y axis movement over time.
@@ -33,6 +38,12 @@ public class PlayerControllerAttributes : ScriptableObject
     /**********************************
      *******     PARAMETERS     *******
      *********************************/
+
+    /// <summary>
+    /// Deceleration applied to speed when not moving (in seconds).
+    /// </summary>
+    public float            SpeedDecelerationForce =     50;
+
 
     /// <summary>
     /// X velocity applied to the player when performing a wall jump.

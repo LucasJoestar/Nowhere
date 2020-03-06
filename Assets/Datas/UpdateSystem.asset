@@ -19,6 +19,3 @@ MonoBehaviour:
   - isFrameInterval: 1
     updateInterval: 0
     timeline: 1
-  - isFrameInterval: 1
-    updateInterval: 0
-    timeline: 2

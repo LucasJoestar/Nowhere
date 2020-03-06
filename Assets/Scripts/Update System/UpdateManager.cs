@@ -118,7 +118,7 @@ public class UpdateManager : MonoBehaviour
         if (!Instance)
         {
             #if UNITY_EDITOR
-            Debug.LogError("Subscription Exception ! No UpdateManager found in scene !");
+            //Debug.LogError("Subscription Exception ! No UpdateManager found in scene !");
             #endif
             return null;
         }

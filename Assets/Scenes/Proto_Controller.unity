@@ -567,7 +567,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!50 &469446375
 Rigidbody2D:
   serializedVersion: 4
@@ -635,7 +635,10 @@ MonoBehaviour:
   speedCoef: 1
   collider: {fileID: 0}
   rigidbody: {fileID: 0}
-  velocity: {x: 0, y: 0}
+  velocity:
+    Force: {x: 0, y: 0}
+    InstantForce: {x: 0, y: 0}
+    Movement: {x: 0, y: 0}
   isJumping: 0
   isSliding: 0
   attributes: {fileID: 11400000, guid: ec1b3c90f2d3fcb48a00b7686ab0ebf6, type: 2}
@@ -2067,7 +2070,10 @@ MonoBehaviour:
   speedCoef: 1
   collider: {fileID: 0}
   rigidbody: {fileID: 0}
-  velocity: {x: 0, y: 0}
+  velocity:
+    Force: {x: 0, y: 0}
+    InstantForce: {x: 0, y: 0}
+    Movement: {x: 0, y: 0}
 --- !u!61 &1676171480
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -2207,7 +2213,7 @@ Rigidbody2D:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1731601543}
   m_BodyType: 1
-  m_Simulated: 0
+  m_Simulated: 1
   m_UseFullKinematicContacts: 0
   m_UseAutoMass: 0
   m_Mass: 0.75
@@ -2235,11 +2241,14 @@ MonoBehaviour:
   isFacingRight: 1
   isGrounded: 0
   useGravity: 1
-  speed: 1
+  speed: 7
   speedCoef: 1
-  collider: {fileID: 0}
-  rigidbody: {fileID: 0}
-  velocity: {x: 0, y: 0}
+  collider: {fileID: 1731601546}
+  rigidbody: {fileID: 1731601544}
+  velocity:
+    Force: {x: 0, y: 0}
+    InstantForce: {x: 0, y: 0}
+    Movement: {x: 0, y: 0}
   isJumping: 0
   isSliding: 0
   attributes: {fileID: 11400000, guid: ec1b3c90f2d3fcb48a00b7686ab0ebf6, type: 2}
@@ -2327,7 +2336,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1731601543}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7, y: -2.645, z: 0}
+  m_LocalPosition: {x: -6.8, y: -2.38, z: 0}
   m_LocalScale: {x: 75, y: 100, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
