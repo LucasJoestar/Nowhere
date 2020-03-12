@@ -6,129 +6,133 @@ using System.IO;
 using UnityEditor;
 #endif
 
-public class GameManager : ScriptableObject
+namespace Nowhere
 {
-    #region Constants
-    /*********************************
-     *******     CONSTANTS     *******
-     ********************************/
-
-    private const string            FILE_PATH =         "GameManager";
-    #endregion
-
-    #region Singleton
-    /*********************************
-     *******     SINGLETON     *******
-     ********************************/
-
-    /// <summary>
-    /// Singleton instance of this class.
-    /// </summary>
-    public static GameManager       Instance            { get; private set; } =     null;
-    #endregion
-
-    #region Fields / Properties
-    /********************************
-     ********     FIELDS     ********
-     *******************************/
-
-    /// <summary>Backing field for <see cref="ProgramSettings"/>.</summary>
-    [SerializeField, Required]
-    private ProgramSettings         programSettings =   null;
-
-    /// <summary>
-    /// Update system used for the game.
-    /// </summary>
-    [SerializeField, Required]
-    private UpdateSystem            updateOrder =       null;
-
-
-    /********************************
-     ******     PROPERTIES     ******
-     *******************************/
-
-    /// <summary>
-    /// Program settings scriptable object of the game.
-    /// </summary>
-    public static ProgramSettings   ProgramSettings    { get { return Instance?.programSettings; } }
-    #endregion
-
-    #region Methods
-    /**********************************************
-     *****     RUNTIME INITIALIZE ON LOAD     *****
-     *********************************************/
-
-    /// <summary>
-    /// Loads the Game Manager before the first scene is being loaded.
-    /// </summary>
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    public static void LoadInstance()
+    public class GameManager : ScriptableObject
     {
-        Instance = Resources.Load<GameManager>(FILE_PATH);
-        if (!Instance) Debug.LogError($"Error ! No Game Manager found on the project. Please place it in a Resources folder at path \"{FILE_PATH}.asset\"");
-    }
+        #region Constants
+        /*********************************
+         *******     CONSTANTS     *******
+         ********************************/
 
-    /// <summary>
-    /// Initialize what needs to be after first scene loading.
-    /// </summary>
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    public static void InitializeGame()
-    {
-        // Creates a new game object for game logic
-        GameObject _gameLogic = new GameObject("[GAME LOGIC]");
-        DontDestroyOnLoad(_gameLogic);
+        private const string            FILE_PATH =             "GameManager";
+        #endregion
 
-        // Create game update system
-        UpdateManager.CreateInstance(Instance.updateOrder.UpdateModes, _gameLogic);
-    }
+        #region Singleton
+        /*********************************
+         *******     SINGLETON     *******
+         ********************************/
+
+        /// <summary>
+        /// Singleton instance of this class.
+        /// </summary>
+        public static GameManager       Instance                { get; private set; } = null;
+        #endregion
+
+        #region Fields / Properties
+        /********************************
+         ********     FIELDS     ********
+         *******************************/
+
+        /// <summary>Backing field for <see cref="ProgramSettings"/>.</summary>
+        [SerializeField, Required]
+        private ProgramSettings         programSettings =       null;
+
+        /// <summary>
+        /// Update system used for the game.
+        /// </summary>
+        [SerializeField, Required]
+        private UpdateSystem            updateOrder =           null;
 
 
-    /**********************************
-     *********     EDITOR     *********
-     *********************************/
+        /********************************
+         ******     PROPERTIES     ******
+         *******************************/
 
-    #if UNITY_EDITOR
-    /// <summary>
-    /// Creates an instance of a GameManager if none is found
-    /// on the project database, or get the one existing.
-    /// </summary>
-    [MenuItem("Nowhere/Create Game Manager")]
-    public static void CreateInstance()
-    {
-        Object _gameManager = null;
-        string[] _gameManagers = AssetDatabase.FindAssets($"t:NWH_GameManager");
+        /// <summary>
+        /// Program settings scriptable object of the game.
+        /// </summary>
+        public static ProgramSettings   ProgramSettings         { get { return Instance?.programSettings; } }
+        #endregion
 
-        // Get first GameManager if existing...
-        if (_gameManagers.Length > 0)
+        #region Methods
+        /**********************************************
+         *****     RUNTIME INITIALIZE ON LOAD     *****
+         *********************************************/
+
+        /// <summary>
+        /// Loads the Game Manager before the first scene is being loaded.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        public static void LoadInstance()
         {
-            _gameManager = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(_gameManagers[0]), typeof(GameManager));
+            Instance = Resources.Load<GameManager>(FILE_PATH);
+            if (!Instance) Debug.LogError($"Error ! No Game Manager found on the project. Please place it in a Resources folder at path \"{FILE_PATH}.asset\"");
         }
-        // ... Or create one if not
-        else
-        {
-            string _path = string.Empty;
-            Object[] _selection = Selection.GetFiltered(typeof(Object), SelectionMode.Assets);
 
-            if (_selection.Length > 0)
+        /// <summary>
+        /// Initialize what needs to be after first scene loading.
+        /// </summary>
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        public static void InitializeGame()
+        {
+            // Creates a new game object for game logic
+            GameObject _gameLogic = new GameObject("[GAME LOGIC]");
+            DontDestroyOnLoad(_gameLogic);
+
+            // Create game update system
+            UpdateManager.CreateInstance(Instance.updateOrder.UpdateModes, _gameLogic);
+        }
+
+
+        /**********************************
+         *********     EDITOR     *********
+         *********************************/
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Creates an instance of a GameManager if none is found
+        /// on the project database, or get the one existing.
+        /// </summary>
+        [MenuItem("Nowhere/Create Game Manager")]
+        public static void CreateInstance()
+        {
+            Object _gameManager = null;
+            string[] _gameManagers = AssetDatabase.FindAssets($"t:NWH_GameManager");
+
+            // Get first GameManager if existing...
+            if (_gameManagers.Length > 0)
             {
-                _path = AssetDatabase.GetAssetPath(_selection[0]).Replace("Assets/", string.Empty);
-
-                if (Path.GetExtension(_path) != string.Empty) _path = Path.GetDirectoryName(_path);
+                _gameManager = AssetDatabase.LoadAssetAtPath(AssetDatabase.GUIDToAssetPath(_gameManagers[0]), typeof(GameManager));
             }
-            _path = Path.Combine(_path, "Resources", Path.GetDirectoryName(FILE_PATH));
+            // ... Or create one if not
+            else
+            {
+                string _path = string.Empty;
+                Object[] _selection = Selection.GetFiltered(typeof(Object), SelectionMode.Assets);
 
-            if (!Directory.Exists(Path.Combine(Application.dataPath, _path))) Directory.CreateDirectory(Path.Combine(Application.dataPath, _path));
+                if (_selection.Length > 0)
+                {
+                    _path = AssetDatabase.GetAssetPath(_selection[0]).Replace("Assets/", string.Empty);
 
-            _path = $"{Path.Combine("Assets", _path, Path.GetFileName(FILE_PATH))}.asset";
+                    if (Path.GetExtension(_path) != string.Empty) _path = Path.GetDirectoryName(_path);
+                }
+                _path = Path.Combine(_path, "Resources", Path.GetDirectoryName(FILE_PATH));
 
-            AssetDatabase.CreateAsset(CreateInstance<GameManager>(), _path);
-            _gameManager = AssetDatabase.LoadAssetAtPath(_path, typeof(GameManager));
+                if (!Directory.Exists(Path.Combine(Application.dataPath, _path))) Directory.CreateDirectory(Path.Combine(Application.dataPath, _path));
+
+                _path = $"{Path.Combine("Assets", _path, Path.GetFileName(FILE_PATH))}.asset";
+
+                AssetDatabase.CreateAsset(CreateInstance<GameManager>(), _path);
+                _gameManager = AssetDatabase.LoadAssetAtPath(_path, typeof(GameManager));
+            }
+
+            // Select the GameManager in the project window
+            EditorGUIUtility.PingObject(_gameManager);
+            Selection.objects = new Object[] { _gameManager };
         }
-        
-        // Select the GameManager in the project window
-        EditorGUIUtility.PingObject(_gameManager);
-        Selection.objects = new Object[] { _gameManager };
+#endif
+        #endregion
     }
-    #endif
-    #endregion
+
 }

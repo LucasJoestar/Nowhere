@@ -12,90 +12,89 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07286b42b317e6b40aa2d8aeedf70500, type: 3}
   m_Name: PlayerControllerAttributes
   m_EditorClassIdentifier: 
-  JumpCurve:
+  speedCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0.35
-      inSlope: -1.267475
-      outSlope: -1.267475
+      value: 9
+      inSlope: 2.846727
+      outSlope: 2.846727
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
-      outWeight: 0.038176034
-    - serializedVersion: 3
-      time: 1
-      value: 0
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  SlideCurve:
-    serializedVersion: 2
-    m_Curve: []
-    m_PreInfinity: 2
-    m_PostInfinity: 2
-    m_RotationOrder: 4
-  GroundSpeedCurve:
-    serializedVersion: 2
-    m_Curve:
-    - serializedVersion: 3
-      time: 0
-      value: 5
-      inSlope: 0
-      outSlope: 0
-      tangentMode: 0
-      weightedMode: 0
-      inWeight: 0
-      outWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.046659593
     - serializedVersion: 3
       time: 0.75
-      value: 7
-      inSlope: 2
-      outSlope: 2
-      tangentMode: 0
+      value: 11
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 136
       weightedMode: 0
-      inWeight: 0
-      outWeight: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  AirSpeedCurve:
+  airSpeedAccelCoef: 0.65
+  groundMovementDecel: 75
+  airMovementDecel: 50
+  groundAboutTurnAccel: 6
+  airAboutTurnAccel: 7
+  highJumpCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 1
-      inSlope: 0
-      outSlope: 0
+      value: 18
+      inSlope: -7.220257
+      outSlope: -7.220257
       tangentMode: 0
       weightedMode: 0
       inWeight: 0
-      outWeight: 0
+      outWeight: 0.060509514
     - serializedVersion: 3
-      time: 2
-      value: 7
-      inSlope: 2
-      outSlope: 2
+      time: 0.7
+      value: 0
+      inSlope: 0.41336346
+      outSlope: 0.41336346
       tangentMode: 0
       weightedMode: 0
-      inWeight: 0
+      inWeight: 0.029459178
       outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  WallJumpCurve:
+  wallJumpCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 18
+      inSlope: -7.220257
+      outSlope: -7.220257
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.060509514
+    - serializedVersion: 3
+      time: 0.7
+      value: 0
+      inSlope: 0.41336346
+      outSlope: 0.41336346
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.029459178
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  wallJumpHorizontalForce: -7.5
+  wallStuckGravityCoef: 0.5
+  wallStuckMinGravityCoef: 0.75
+  slideCurve:
     serializedVersion: 2
     m_Curve: []
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  SpeedDecelerationForce: 0.1
-  WallJumpXVelocity: -5
-  WallStuckFallCoef: 0.5

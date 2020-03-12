@@ -1,36 +1,60 @@
-﻿using UnityEngine;
+﻿using EnhancedEditor;
+using UnityEngine;
 
-[CreateAssetMenu(fileName = "ProgramSettings", menuName = "Datas/Program Settings", order = 50)]
-public class ProgramSettings : ScriptableObject
+namespace Nowhere
 {
-    #region Physics
-    /**********************************
-     *********     FIELDS     *********
-     *********************************/
+    [CreateAssetMenu(fileName = "ProgramSettings", menuName = "Datas/Program Settings", order = 50)]
+    public class ProgramSettings : ScriptableObject
+    {
+        #region Physics
+        /**********************************
+         *********     FIELDS     *********
+         *********************************/
 
-    /// <summary>Backing field for <see cref="GroundDecelerationForce"/>.</summary>
-    [SerializeField]
-    private float       groundDecelerationForce =     .2f;
+        [HorizontalLine(1, order = 0), Section("PROGRAM SETTINGS", order = 1), Space(order = 2)]
 
-    /// <summary>Backing field for <see cref="GravityMinYForce"/>.</summary>
-    [SerializeField]
-    private float       gravityMinYForce =              -25;
+        [SerializeField, Range(0, 1)]
+        [Tooltip("Multiplier applied to object horizontal force when they get grounded")]
+        private float       onGroundedHorizontalForceMultiplier =       .55f;
+
+        [SerializeField]
+        [Tooltip("Minimum allowed gravity value")]
+        private float       minGravity =                                -25;
 
 
-    /**********************************
-     *******     PROPERTIES     *******
-     *********************************/
+        [SerializeField, Min(0), HorizontalLine(1)]
+        [Tooltip("Deceleration applied to object force when on ground")]
+        private float       groundDecelerationForce =                   12.5f;
 
-    /// <summary>
-    /// Object deceleration coefficient applied to velocity force
-    /// when grounded.
-    /// </summary>
-    public float        GroundDecelerationForce { get { return groundDecelerationForce; } }
+        [SerializeField, Min(0)]
+        [Tooltip("Deceleration applied to object force when in air")]
+        private float       airDecelerationForce =                      5f;
 
-    /// <summary>
-    /// Minimal Y value of the force applied on objects
-    /// for physics gravity simulation.
-    /// </summary>
-    public float        GravityMinYForce        { get { return gravityMinYForce; } }
-    #endregion
+
+        /**********************************
+         *******     PROPERTIES     *******
+         *********************************/
+
+        /// <summary>
+        /// Multiplier applied to object horizontal force when they get grounded.
+        /// </summary>
+        public float        OnGroundedHorizontalForceMultiplier                  { get { return onGroundedHorizontalForceMultiplier; } }
+
+        /// <summary>
+        /// Minimum allowed gravity value.
+        /// </summary>
+        public float        MinGravity                                  { get { return minGravity; } }
+
+
+        /// <summary>
+        /// Deceleration applied to object force when on ground.
+        /// </summary>
+        public float        GroundDecelerationForce                     { get { return groundDecelerationForce; } }
+
+        /// <summary>
+        /// Deceleration applied to object force when in air.
+        /// </summary>
+        public float        AirDecelerationForce                        { get { return airDecelerationForce; } }
+        #endregion
+    }
 }

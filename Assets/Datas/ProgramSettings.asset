@@ -12,5 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61e94977d57c9124e858ac89a2a7908c, type: 3}
   m_Name: ProgramSettings
   m_EditorClassIdentifier: 
-  groundDecelerationForce: 2.5
-  gravityMinYForce: -25
+  onGroundedHorizontalForceMultiplier: 0.35
+  minGravity: -25
+  groundDecelerationForce: 12.5
+  airDecelerationForce: 0
