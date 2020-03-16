@@ -21,6 +21,12 @@ namespace Nowhere
         [SerializeField, Required]
         private PlayerControllerAttributes      attributes =            null;
 
+        /// <summary>
+        /// Player controller attributes, stored in a scriptable object.
+        /// </summary>
+        [SerializeField, Required]
+        private Animator                        animator =              null;
+
 
         [HorizontalLine(2, SuperColor.Raspberry)]
 
@@ -84,6 +90,7 @@ namespace Nowhere
             protected set
             {
                 isMoving = value;
+                animator.SetBool("IsMoving", value);
             }
         }
 
@@ -109,6 +116,7 @@ namespace Nowhere
             protected set
             {
                 wallStuckState = value;
+                animator.SetBool("IsWallStuck", value != 0);
             }
         }
         #endregion
@@ -189,6 +197,23 @@ namespace Nowhere
             // Move the player according to movement input
             float _movement = Input.GetAxis("Horizontal");
             if (_movement != 0) Move(new Vector2(_movement, 0));
+        }
+        #endregion
+
+        #region Flip
+        /**********************************
+         **********     FLIP     **********
+         *********************************/
+
+        /// <summary>
+        /// Makes the object flip.
+        /// </summary>
+        public override void Flip()
+        {
+            // Don't flip while stuck to a wall
+            if (wallStuckState != 0) return;
+
+            base.Flip();
         }
         #endregion
 
@@ -276,9 +301,9 @@ namespace Nowhere
         protected override void AddGravity()
         {
             // Apply a coefficient to gravity when stuck to a wall
-            if (wallStuckState == WallStuck.None) base.AddGravity();
+            if ((wallStuckState != 0) && !isJumping) AddGravity(attributes.WallStuckGravityCoef, attributes.WallStuckMinGravityCoef);
 
-            else AddGravity(attributes.WallStuckGravityCoef, attributes.WallStuckMinGravityCoef);
+            else base.AddGravity();
         }
 
 
@@ -302,14 +327,8 @@ namespace Nowhere
         /// </summary>
         protected override void ComputeVelocityBeforeMovement()
         {
-            // Reset speed if not moving
-            if (lastMovement == 0)
-            {
-                if ((velocity.Movement.x == 0) && (speed > 0))
-                    ResetSpeed();
-            }
             // When going in opposite direction from previous movement, transit to it
-            else if (!Mathm.HaveDifferentSign(lastMovement - velocity.Movement.x, lastMovement))
+            if ((lastMovement != 0) && !Mathm.HaveDifferentSign(lastMovement - velocity.Movement.x, lastMovement))
             {
                 // About-Turn
                 if ((velocity.Movement.x != 0) && Mathm.HaveDifferentSign(lastMovement, velocity.Movement.x))
@@ -361,8 +380,13 @@ namespace Nowhere
 
             // Set wall stuck state if different
             if (wallStuckState != _state)
-                WallStuckState = _state;
+            {
+                // Face wall opposite side
+                if (_state < 0) Flip(true);
+                else if (_state > 0) Flip(false);
 
+                WallStuckState = _state;
+            } 
 
             // Set wall state when hitting a vertical collider
             bool CastForWall()
@@ -452,6 +476,14 @@ namespace Nowhere
 
             if (isMoving != _isMoving)
                 IsMoving = _isMoving;
+
+            // Reset speed if not moving
+            if (!_isMoving && (speed > 0))
+                ResetMovement();
+
+            // Set animator ground state
+            if (!isGrounded)
+                animator.SetInteger("GroundState", (int)Mathf.Sign(_finalMovement.y));
         }
 
         /// <summary>
@@ -489,8 +521,14 @@ namespace Nowhere
             // Execute base method
             base.OnSetGrounded();
 
-            // Set wall stuck state to none if needed
-            if (wallStuckState != WallStuck.None) WallStuckState = WallStuck.None;
+            if (isGrounded)
+            {
+                // Set wall stuck state to none if needed
+                if (wallStuckState != WallStuck.None)
+                    WallStuckState = WallStuck.None;
+
+                animator.SetInteger("GroundState", 0);
+            }
         }
         #endregion
 
@@ -508,7 +546,7 @@ namespace Nowhere
             AnimationCurve _curve = null;
             isJumping = true;
 
-            //if (velocity.Force.y != 0) velocity.Force.y = 0;
+            animator.SetTrigger("Jump");
 
             // Executes actions depending on performing a normal or a wall jump.
             if (isGrounded)
@@ -519,6 +557,8 @@ namespace Nowhere
 
                 // If moving, add extra X velocity to the player
                 if (velocity.Movement.x != 0) Move(new Vector2(isFacingRight.ToSign() * .25f, 0));
+
+                AddForce(new Vector2(velocity.Movement.x * .9f, 0));
             }
             else
             {
@@ -675,6 +715,9 @@ namespace Nowhere
 
             // Execute base class awake
             base.Awake();
+
+            // Get missing components
+            if (!animator) animator = GetComponent<Animator>();
         }
 
         // Destroying the attached Behaviour will result in the game or Scene receiving OnDestroy
@@ -700,5 +743,4 @@ namespace Nowhere
 
         #endregion
     }
-
 }

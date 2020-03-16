@@ -68,5 +68,4 @@ namespace Nowhere
         public Vector2 GetVelocity() => ((Movement + Force) * Time.deltaTime) + InstantForce;
         #endregion
     }
-
 }
