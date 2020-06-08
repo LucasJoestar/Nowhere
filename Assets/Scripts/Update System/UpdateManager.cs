@@ -1,159 +1,133 @@
-﻿using System;
+﻿// ======= Created by Lucas Guibert - https://github.com/LucasJoestar ======= //
+//
+// Notes :
+//
+// ========================================================================== //
+
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Nowhere
 {
+    #region Update Interfaces
+    /*************************************
+     *****     UPDATE INTERFACES     *****
+     ************************************/
+
+    public interface IUpdate { void Update(); }
+    public interface ICameraUpdate { void Update(); }
+    public interface IInputUpdate { void Update(); }
+    public interface IMovableUpdate { void Update(); }
+    public interface IPhysicsUpdate { void Update(); }
+    #endregion
+
     public class UpdateManager : MonoBehaviour
     {
-        #region Events
-        /**********************************
-         *********     EVENTS     *********
-         *********************************/
-
+        #region Fields
         /// <summary>
-        /// Called every frame for frames-related update modes.
+        /// Singleton instance.
         /// </summary>
-        private event Action OnFrameUpdate;
+        public static UpdateManager Instance { get; private set; }
 
-        /// <summary>
-        /// Called every frame with <see cref="Time.deltaTime"/> as parameter
-        /// for seconds-related update modes.
-        /// </summary>
-        private event Action<float> OnTimeUpdate;
-        #endregion
+        // ------------------------------
 
-        #region Singleton
-        /*********************************
-         *******     SINGLETON     *******
-         ********************************/
-
-        /// <summary>
-        /// Singleton instance of this class.
-        /// </summary>
-        public static UpdateManager Instance { get; private set; } = null;
-        #endregion
-
-        #region Memory
-        /**********************************
-         *********     MEMORY     *********
-         *********************************/
-
-        /// <summary>
-        /// Cache reference for update modes in <see cref="GameManager.updateOrder"/>.
-        /// </summary>
-        private UpdateMode[] updateModes = null;
+        private List<IUpdate> updates = new List<IUpdate>();
+        private List<ICameraUpdate> cameraUpdates = new List<ICameraUpdate>();
+        private List<IInputUpdate> inputUpdates = new List<IInputUpdate>();
+        private List<IMovableUpdate> movableUpdates = new List<IMovableUpdate>();
+        private List<IPhysicsUpdate> physicsUpdates = new List<IPhysicsUpdate>();
         #endregion
 
         #region Methods
 
-        #region Original Methods
-        /*********************************************
-         *****     RUNTIME INSTANCE CREATION     *****
-         ********************************************/
+        #region Registrations
+        /// <summary>
+        /// Registers an object on global update.
+        /// </summary>
+        public void Register(IUpdate _update) => updates.Add(_update);
 
         /// <summary>
-        /// Create an instance of this class and set it as singleton.
-        /// Should be called on game load by GameManager only.
+        /// Unregisters an object from global update.
         /// </summary>
-        public static void CreateInstance(UpdateMode[] _updateModes, GameObject _root)
-        {
-            // Add an UpdateSystem component to a root GameObject,
-            // and set it as singleton
-            if (Instance) return;
+        public void Unregister(IUpdate _update) => updates.Remove(_update);
 
-            Instance = (UpdateManager)_root.AddComponent(typeof(UpdateManager));
-
-            // Set singleton cache reference for update modes
-            Instance.updateModes = _updateModes;
-
-            // In the original array order,
-            // subscribe each update mode IncreaseTimer method to the correct event
-            for (int _i = 0; _i < _updateModes.Length; _i++)
-            {
-                if (_updateModes[_i].IsFrameInterval) Instance.OnFrameUpdate += _updateModes[_i].IncreaseTimer;
-                else Instance.OnTimeUpdate += _updateModes[_i].IncreaseTimer;
-            }
-        }
-
-
-        /****************************************
-         ******     UPDATE SUBSCRIBERS     ******
-         ***************************************/
+        // ------------------------------
 
         /// <summary>
-        /// Suscribes a delegate to an indicated timeline for update.
+        /// Registers an object on Camera update.
         /// </summary>
-        /// <param name="_delegate">Delegate to subscribe.</param>
-        /// <param name="_timeline">Timeline to subscribe to for update.</param>
-        public static void SubscribeToUpdate(Action _delegate, UpdateModeTimeline _timeline)
-        {
-            UpdateMode _updateMode = FindUpdateMode(_timeline);
-            if (_updateMode == null) return;
-
-            _updateMode.OnUpdate += _delegate;
-
-        }
+        public void Register(ICameraUpdate _update) => cameraUpdates.Add(_update);
 
         /// <summary>
-        /// Unsuscribes a delegate from an indicated timeline for update.
+        /// Unregisters an object from Camera update.
         /// </summary>
-        /// <param name="_delegate">Delegate to unsubscribe.</param>
-        /// <param name="_timeline">Timeline to unsubscribe from.</param>
-        public static void UnsubscribeToUpdate(Action _delegate, UpdateModeTimeline _timeline)
-        {
-            UpdateMode _updateMode = FindUpdateMode(_timeline);
-            if (_updateMode == null) return;
+        public void Unregister(ICameraUpdate _update) => cameraUpdates.Remove(_update);
 
-            _updateMode.OnUpdate -= _delegate;
-        }
-
+        // ------------------------------
 
         /// <summary>
-        /// Retrieves the update mode associated with the indicated timeline.
+        /// Registers an object on Input update.
         /// </summary>
-        /// <param name="_timeline">Timeline to find update mode associated with.</param>
-        /// <returns>Returns the update mode associated with the timeline, null if not found.</returns>
-        private static UpdateMode FindUpdateMode(UpdateModeTimeline _timeline)
-        {
-            // If no instance, debug it return
-            if (!Instance)
-            {
-#if UNITY_EDITOR
-                //Debug.LogError("Subscription Exception ! No UpdateManager found in scene !");
-#endif
-                return null;
-            }
+        public void Register(IInputUpdate _update) => inputUpdates.Add(_update);
 
-            // Subscribe delegate to the indicated timeline
-            for (int _i = 0; _i < Instance.updateModes.Length; _i++)
-            {
-                if (Instance.updateModes[_i].Timeline == _timeline) return Instance.updateModes[_i];
-            }
+        /// <summary>
+        /// Unregisters an object from Input update.
+        /// </summary>
+        public void Unregister(IInputUpdate _update) => inputUpdates.Remove(_update);
 
-            // If indicated timeline couldn't be found, debug it
-            Debug.LogError($"Subscription Exception ! No Timeline for \"{_timeline}\" could be found !");
-            return null;
-        }
+        // ------------------------------
+
+        /// <summary>
+        /// Register an object on Movable update.
+        /// </summary>
+        public void Register(IMovableUpdate _update) => movableUpdates.Add(_update);
+
+        /// <summary>
+        /// Unregister an object from Movable update.
+        /// </summary>
+        public void Unregister(IMovableUpdate _update) => movableUpdates.Remove(_update);
+
+        // ------------------------------
+
+        /// <summary>
+        /// Register an object on Physics update.
+        /// </summary>
+        public void Register(IPhysicsUpdate _update) => physicsUpdates.Add(_update);
+
+        /// <summary>
+        /// Unregister an object from Physics update.
+        /// </summary>
+        public void Unregister(IPhysicsUpdate _update) => physicsUpdates.Remove(_update);
         #endregion
 
-        #region Unity Methods
-        /*********************************
-         *****     MONOBEHAVIOUR     *****
-         ********************************/
-
-        // Start is called before the first frame update
-        private void Start()
+        #region Monobehaviour
+        private void Awake()
         {
-            // Destroy object if not singleton
-            if (Instance != this) Destroy(this);
+            // Singleton set.
+            if (!Instance)
+                Instance = this;
+            else
+                Destroy(this);
         }
 
-        // Update is called once per frame
         private void Update()
         {
-            // Update all update modes by calling events
-            OnFrameUpdate?.Invoke();
-            OnTimeUpdate?.Invoke(Time.deltaTime);
+            // Call all registered interfaces update.
+            int _i;
+            for (_i = 0; _i < inputUpdates.Count; _i++)
+                inputUpdates[_i].Update();
+
+            for (_i = 0; _i < updates.Count; _i++)
+                updates[_i].Update();
+
+            for (_i = 0; _i < physicsUpdates.Count; _i++)
+                physicsUpdates[_i].Update();
+
+            for (_i = 0; _i < movableUpdates.Count; _i++)
+                movableUpdates[_i].Update();
+
+            for (_i = 0; _i < cameraUpdates.Count; _i++)
+                cameraUpdates[_i].Update();
         }
         #endregion
 

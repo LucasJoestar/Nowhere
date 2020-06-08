@@ -20,12 +20,18 @@ namespace EnhancedEditor.Editor
         /// <summary>
         /// Default height used to draw help boxes.
         /// </summary>
-        public const int            DefaultHelpBoxHeight =      38;
+        public const int            DefaultHelpBoxHeight =          38;
 
         /// <summary>
         /// Space on each side of the sections label (in pixels).
         /// </summary>
-        public const int            SpaceAroundSectionLabel =   5;
+        public const int            SpaceAroundSectionLabel =       5;
+
+        /// <summary>
+        /// Separator width used for fields draw.
+        /// </summary>
+        public const int            StandardHorizontalSeparator =   5;
+
 
         /****************************
          *******   PROPERTY   *******
@@ -34,15 +40,81 @@ namespace EnhancedEditor.Editor
         /// <summary>
         /// GUIStyle used to draw section label.
         /// </summary>
-        public static GUIStyle      SectionLabelStyle           { get { return EditorStyles.boldLabel; } }
+        public static GUIStyle      SectionLabelStyle               { get { return EditorStyles.boldLabel; } }
         #endregion
 
         #region Methods
 
-        #region Serialized Properties Value
-        /*************************************
-         ***   SERIALIZED PROPERTY VALUE   ***
-         ************************************/
+        #region GUIContent
+        /// <summary>
+        /// Get appropriated GUIContent label from a serialized property.
+        /// </summary>
+        /// <param name="_property">Property to get label.</param>
+        /// <returns>Returns property associated GUIContent label.</returns>
+        public static GUIContent GetPropertyLabel(SerializedProperty _property) => new GUIContent(ObjectNames.NicifyVariableName(_property.name), _property.tooltip);
+        #endregion
+
+        #region Serialized Properties Informations
+        /*****************************************
+        *****   SERIALIZED PROPERTIES INFOS  *****
+        *****************************************/
+
+        /// <summary>
+        /// Get the height used to draw an asset preview property field.
+        /// </summary>
+        /// <param name="_property">Property to use.</param>
+        /// <param name="_foldout">Shown asset preview foldout state.</param>
+        /// <param name="_previewAspect">Asset preview aspect.</param>
+        /// <returns>Returns height value to draw associated asset preview property field.</returns>
+        public static float GetAssetPreviewPropertyHeight(SerializedProperty _property, bool _foldout, float _previewAspect)
+        {
+            float _height = EditorGUIUtility.singleLineHeight;
+
+            if (_property.propertyType != SerializedPropertyType.ObjectReference) _height += EditorGUIUtility.standardVerticalSpacing + DefaultHelpBoxHeight;
+
+            else if (_foldout && GetAssetPreview(_property)) _height += EditorGUIUtility.standardVerticalSpacing + _previewAspect;
+
+            return _height;
+        }
+
+        /// <summary>
+        /// Get the height used to draw a required property field.
+        /// </summary>
+        /// <param name="_property">Property to use.</param>
+        /// <returns>Returns height value to draw associated required property field.</returns>
+        public static float GetRequiredPropertyHeight(SerializedProperty _property)
+        {
+            float _height = EditorGUIUtility.singleLineHeight;
+
+            if (IsPropertyRequired(_property))
+                _height += EditorGUIUtility.standardVerticalSpacing + DefaultHelpBoxHeight;
+
+            return _height;
+        }
+
+        /// <summary>
+        /// Get if a property is marked as "required" or not.
+        /// Required property are object refrence type with no value.
+        /// </summary>
+        /// <param name="_property">Property to check.</param>
+        /// <returns>Returns true if property type is object reference and its value is not set, false otherwise.</returns>
+        public static bool IsPropertyRequired(SerializedProperty _property)
+        {
+            return (_property.propertyType == SerializedPropertyType.ObjectReference) && !_property.objectReferenceValue;
+        }
+        #endregion
+
+        #region Serialized Properties Attributes
+        /*******************************************
+         ***   SERIALIZED PROPERTIES ATTRIBUTES  ***
+         ******************************************/
+
+        /// <summary>
+        /// Get the asset preview texture from the property object reference.
+        /// </summary>
+        /// <param name="_property">Property to get asset preview texture from.</param>
+        /// <returns>Returns property object reference preview texture if exist, null if none or wrong property type.</returns>
+        public static Texture2D GetAssetPreview(SerializedProperty _property) => _property.objectReferenceValue ? AssetPreview.GetAssetPreview(_property.objectReferenceValue) : null;
 
         /// <summary>
         /// Get the single value of a property.

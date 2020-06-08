@@ -40,7 +40,8 @@ MonoBehaviour:
   groundMovementDecel: 75
   airMovementDecel: 50
   groundAboutTurnAccel: 6
-  airAboutTurnAccel: 7
+  airAboutTurnAccel: 6.25
+  groundSnapHeight: 0.25
   highJumpCurve:
     serializedVersion: 2
     m_Curve:
@@ -65,6 +66,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  coyoteTime: 0.15
+  jumpPeekDifference: 7
   wallJumpCurve:
     serializedVersion: 2
     m_Curve:
@@ -89,7 +92,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  wallJumpHorizontalForce: -7.5
+  wallJumpHorizontalForce: -12
+  wallJumpGap: 0.25
   wallStuckGravityCoef: 0.5
   wallStuckMinGravityCoef: 0.75
   slideCurve:
