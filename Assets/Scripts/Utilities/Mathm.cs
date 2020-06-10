@@ -1,4 +1,10 @@
-﻿using UnityEngine;
+﻿// ======= Created by Lucas Guibert - https://github.com/LucasJoestar ======= //
+//
+// Notes :
+//
+// ========================================================================== //
+
+using UnityEngine;
 
 namespace Nowhere
 {
@@ -8,10 +14,6 @@ namespace Nowhere
     public static class Mathm
     {
         #region Methods
-        /************************************
-         *******     BOOL UTILITY     *******
-         ***********************************/
-
         /// <summary>
         /// Get a boolean as a sign.
         /// 1 if true, -1 otherwise.
@@ -23,10 +25,7 @@ namespace Nowhere
             return _bool ? 1 : -1;
         }
 
-
-        /************************************
-         *****     SIGNS COMPARISON     *****
-         ***********************************/
+        // -----------------------
 
         /// <summary>
         /// Get if two floats have a different sign.
@@ -50,10 +49,7 @@ namespace Nowhere
             return ((_a != 0) && (_b != 0)) ? HaveDifferentSign(_a, _b) : false;
         }
 
-
-        /***********************************
-         *****     VECTORS UTILITY     *****
-         **********************************/
+        // -----------------------
 
         /// <summary>
         /// Get if a Vector2 is null, that is

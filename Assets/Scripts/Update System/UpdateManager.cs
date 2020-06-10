@@ -10,13 +10,13 @@ using UnityEngine;
 namespace Nowhere
 {
     #region Update Interfaces
-    /*************************************
-     *****     UPDATE INTERFACES     *****
-     ************************************/
+    // -------------------------------------------
+    // Update Interfaces
+    // -------------------------------------------
 
-    public interface IUpdate { void Update(); }
-    public interface ICameraUpdate { void Update(); }
-    public interface IInputUpdate { void Update(); }
+    public interface IUpdate        { void Update(); }
+    public interface ICameraUpdate  { void Update(); }
+    public interface IInputUpdate   { void Update(); }
     public interface IMovableUpdate { void Update(); }
     public interface IPhysicsUpdate { void Update(); }
     #endregion
@@ -29,7 +29,7 @@ namespace Nowhere
         /// </summary>
         public static UpdateManager Instance { get; private set; }
 
-        // ------------------------------
+        // -----------------------
 
         private List<IUpdate> updates = new List<IUpdate>();
         private List<ICameraUpdate> cameraUpdates = new List<ICameraUpdate>();
@@ -51,7 +51,7 @@ namespace Nowhere
         /// </summary>
         public void Unregister(IUpdate _update) => updates.Remove(_update);
 
-        // ------------------------------
+        // -----------------------
 
         /// <summary>
         /// Registers an object on Camera update.
@@ -63,7 +63,7 @@ namespace Nowhere
         /// </summary>
         public void Unregister(ICameraUpdate _update) => cameraUpdates.Remove(_update);
 
-        // ------------------------------
+        // -----------------------
 
         /// <summary>
         /// Registers an object on Input update.
@@ -75,7 +75,7 @@ namespace Nowhere
         /// </summary>
         public void Unregister(IInputUpdate _update) => inputUpdates.Remove(_update);
 
-        // ------------------------------
+        // -----------------------
 
         /// <summary>
         /// Register an object on Movable update.
@@ -87,7 +87,7 @@ namespace Nowhere
         /// </summary>
         public void Unregister(IMovableUpdate _update) => movableUpdates.Remove(_update);
 
-        // ------------------------------
+        // -----------------------
 
         /// <summary>
         /// Register an object on Physics update.
@@ -112,7 +112,7 @@ namespace Nowhere
 
         private void Update()
         {
-            // Call all registered interfaces update.
+            // Call all registered interface updates.
             int _i;
             for (_i = 0; _i < inputUpdates.Count; _i++)
                 inputUpdates[_i].Update();

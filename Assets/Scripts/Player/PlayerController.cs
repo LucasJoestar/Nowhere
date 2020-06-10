@@ -27,18 +27,10 @@ namespace Nowhere
     public class PlayerController : Movable, IInputUpdate
     {
         #region Fields / Properties
-
-        #region Serialized Variables
-        /************************************
-         ***     SERIALIZED VARIABLES     ***
-         ***********************************/
-
         [HorizontalLine(1, order = 0), Section("PLAYER CONTROLLER", 50, 0, order = 1), HorizontalLine(2, SuperColor.Chocolate, order = 2)]
 
-        [SerializeField, Required] private PlayerControllerAttributes   attributes =    null;
-        [SerializeField, Required] private Animator                     animator =      null;
-
-        // --------------------------------------------------
+        [SerializeField, Required] private PlayerControllerAttributes attributes = null;
+        [SerializeField, Required] private Animator animator = null;
 
         [HorizontalLine(2, SuperColor.Raspberry)]
 
@@ -57,7 +49,7 @@ namespace Nowhere
                 {
                     isPlayable = value;
 
-                    // Manage input update registration
+                    // Manage input update registration.
                     if (value)
                         UpdateManager.Instance.Register((IInputUpdate)this);
 
@@ -67,7 +59,7 @@ namespace Nowhere
             }
         }
 
-        // --------------------------------------------------
+        // -----------------------
 
         [SerializeField, ReadOnly] private bool isMoving =      false;
         [SerializeField, ReadOnly] private bool isJumping =     false;
@@ -85,37 +77,23 @@ namespace Nowhere
             }
         }
 
-        // --------------------------------------------------
-
-        [SerializeField, ReadOnly, HelpBox("Last movement of the player on the x axis", HelpBoxType.Info)]
+        [SerializeField, ReadOnly, HelpBox("Last movement of the player on the X axis", HelpBoxType.Info)]
         private float lastMovement = 0;
-        #endregion
 
-        #region Variables
-        /*********************************
-         *******     VARIABLES     *******
-         ********************************/
+        // -----------------------
 
         private readonly int anim_GroundStateID =   Animator.StringToHash("GroundState");
         private readonly int anim_IsMovingID =      Animator.StringToHash("IsMoving");
         private readonly int anim_IsWallStuckID =   Animator.StringToHash("IsWallStuck");
         private readonly int anim_JumpID =          Animator.StringToHash("Jump");
 
-        // --------------------------------------------------
-        
         private float coyoteTimeVar = 0;
-        #endregion
-
         #endregion
 
         #region Methods
 
-        #region Player Controller
-
         #region Inputs
-        /**********************************
-         *********     INPUTS     *********
-         *********************************/
+        private float jumpBufferDown = 0;
 
         /// <summary>
         /// Check player inputs and execute movement or other actions.
@@ -125,83 +103,64 @@ namespace Nowhere
             float _movement = Input.GetAxis("Horizontal");
             if (_movement != 0) MoveHorizontally(_movement);
 
-            // ------------------------------
-
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0)) Jump();
-
-            // ------------------------------
+            if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
+            {
+                if (!Jump())
+                {
+                    jumpBufferDown = Time.time;
+                }
+            }
 
             // CHEAT CODES
             if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.F)) AddForce(new Vector2(facingSide * 20, 0));
         }
+
+        private void ConsumeJumpBuffer()
+        {
+            if ((Time.time - jumpBufferDown < attributes.JumpBufferTime) &&
+                (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Joystick1Button0)))
+            {
+                Jump();
+            }
+        }
         #endregion
 
         #region Flip
-        /**********************************
-         **********     FLIP     **********
-         *********************************/
-
         /// <summary>
-        /// Makes the object flip.
+        /// Flip the object (face opposite side).
         /// </summary>
         public override void Flip()
         {
             // Don't flip while stuck to a wall.
             if (wallStuckState == 0)
-            {
                 base.Flip();
-            }
         }
         #endregion
 
-        #region Speed
-        /*********************************
-         *********     SPEED     *********
-         ********************************/
-
-        /// <summary>
-        /// Reset movement speed.
-        /// </summary>
-        public void ResetSpeed() => speed = speedCurveVarTime = 0;
-        #endregion
-
         #region Velocity
-        /********************************
-         *******     VELOCITY     *******
-         *******************************/
-
         private float speedCurveVarTime = 0;
 
-        /// <summary>
-        /// Moves the object horizontally.
-        /// </summary>
         protected override void MoveHorizontally(float _movement)
         {
             // Increase speed according to curve.
             if (_movement != 0)
             {
-                speed = AnimationCurveUtility.IncreaseValue(attributes.SpeedCurve, speed, ref speedCurveVarTime, isGrounded ? 1 : attributes.AirSpeedAccCoef);
+                speed = AnimationCurveUtility.IncreaseValue(attributes.SpeedCurve, speed, ref speedCurveVarTime, isGrounded ? 1 : attributes.AirSpeedAccelCoef);
                 _movement *= speed;
 
                 base.MoveHorizontally(_movement);
             }
         }
 
-        // ----------------------------------------
-
-        /// <summary>
-        /// Reset player movement.
-        /// </summary>
         private void ResetMovement()
         {
-            ResetSpeed();
-            movement.x = lastMovement = 0;
+            movement.x = lastMovement = speed = speedCurveVarTime = 0;
         }
 
-        // ----------------------------------------
+        // -----------------------
 
         /// <summary>
-        /// Get the object velocity movement during this frame.
+        /// Get the object velocity movement for this frame.
         /// </summary>
         protected override Vector2 GetVelocity()
         {
@@ -214,28 +173,25 @@ namespace Nowhere
             return base.GetVelocity();
         }
 
-        // ----------------------------------------
+        // -----------------------
 
         bool isGoingOppositeSide = false;
 
-        /// <summary>
-        /// Compute velocity value before movement calculs.
-        /// </summary>
         protected override void ComputeVelocityBeforeMovement()
         {
-            // When going in opposite direction from previous movement, transit to it
+            // When going in opposite direction from previous movement, transit to it.
             if (isGoingOppositeSide || ((lastMovement != 0) && !Mathm.HaveDifferentSign(lastMovement - movement.x, lastMovement)))
             {
                 isGoingOppositeSide = true;
 
-                // About-Turn
+                // About-Turn.
                 if ((movement.x != 0) && Mathm.HaveDifferentSign(lastMovement, movement.x))
                 {
                     float _coef = isGrounded ? attributes.GroundAboutTurnAccel : attributes.AirAboutTurnAccel;
                    
                     movement.x = Mathf.MoveTowards(lastMovement, movement.x, speed * Time.deltaTime * _coef);
                 }
-                // Deceleration
+                // Deceleration.
                 else if (lastMovement != movement.x)
                 {
                     float _coef = isGrounded ? attributes.GroundMovementDecel : attributes.AirMovementDecel;
@@ -254,15 +210,7 @@ namespace Nowhere
         #endregion
 
         #region Physics
-        /*******************************
-         *******     PHYSICS     *******
-         ******************************/
-
-        /// <summary>
-        /// Add gravity force to the object.
-        /// Called every frame while the object is using gravity.
-        /// </summary>
-        public override void PhysicsUpdate()
+        protected override void PhysicsUpdate()
         {
             // Apply a coefficient to gravity when :
             //  • Stuck to a wall
@@ -279,18 +227,11 @@ namespace Nowhere
         #endregion
 
         #region Walls
-        /***************************************
-         ******     WALL INTERACTIONS     ******
-         **************************************/
-
-        /// <summary>
-        /// Check if the player is against a wall.
-        /// </summary>
         private void CheckWallStatus()
         {
             WallStuck _state = WallStuck.None;
 
-            // Get first cast direction
+            // Get first cast direction.
             float _direction = (wallStuckState == 0) ? Mathf.Sign(movement.x + force.x) : (int)wallStuckState;
             Vector2 _movement = new Vector2(_direction * Physics2D.defaultContactOffset * 2.5f, 0);
 
@@ -311,6 +252,8 @@ namespace Nowhere
                     Flip(-(int)_state);
                     transform.rotation = Quaternion.identity;
                     ResetMovement();
+
+                    ConsumeJumpBuffer();
                 }
 
                 WallStuckState = _state;
@@ -332,10 +275,6 @@ namespace Nowhere
         #endregion
 
         #region Freeze
-        /********************************
-         ********     FREEZE     ********
-         *******************************/
-
         private Coroutine freezeCoroutine = null;
 
         /// <summary>
@@ -349,10 +288,6 @@ namespace Nowhere
             freezeCoroutine = StartCoroutine(DoFreeze(_duration));
         }
 
-        /// <summary>
-        /// Freeze the player for a certain duration.
-        /// Coroutine associated with the <see cref="Freeze(float)"/> method.
-        /// </summary>
         private IEnumerator DoFreeze(float _duration)
         {
             WaitForSeconds _wait = new WaitForSeconds(_duration);
@@ -366,15 +301,7 @@ namespace Nowhere
         #endregion
 
         #region Movements
-        /**************************************
-         ******     MOV. SYSTEM COGS     ******
-         *************************************/
-
-        /// <summary>
-        /// Update this object position based on velocity and related informations.
-        /// Called at the end of the frame.
-        /// </summary>
-        public override void MovableUpdate()
+        protected override void MovableUpdate()
         {
             if (!isGrounded)
                 CheckWallStatus();
@@ -382,9 +309,7 @@ namespace Nowhere
             base.MovableUpdate();
         }
 
-        /***********************************
-         ********     CALLBACKS     ********
-         **********************************/
+        // -----------------------
 
         /// <summary>
         /// Called after velocity has been applied.
@@ -393,9 +318,7 @@ namespace Nowhere
         {
             base.OnAppliedVelocity(_movement);
 
-            // -------------------------------------------
-
-            // Player moving state
+            // Player moving state.
             bool _isMoving = (lastMovement != 0) && (Mathf.Abs(_movement.x) > .0001f);
 
             if (isMoving != _isMoving)
@@ -419,7 +342,7 @@ namespace Nowhere
             {
                 for (int _i = 0; _i < castBufferCount; _i++)
                 {
-                    if (Mathf.Abs(castBuffer[_i].normal.y) == 1)
+                    if (castBuffer[_i].normal.y == -1)
                     {
                         StopJump();
                         return;
@@ -427,9 +350,7 @@ namespace Nowhere
                 }
             }
 
-            // -------------------------------------------
-
-            // Air rotation
+            // Air rotation.
             if (!isGrounded && wallStuckState == 0)
             {
                 Quaternion _rotation;
@@ -450,8 +371,6 @@ namespace Nowhere
         {
             base.OnSetGrounded();
 
-            // -----------
-
             if (isGrounded)
             {
                 StopJump();
@@ -461,6 +380,8 @@ namespace Nowhere
 
                 transform.rotation = Quaternion.identity;
                 animator.SetInteger(anim_GroundStateID, 0);
+
+                ConsumeJumpBuffer();
             }
 
             // Set last time the player left a platform.
@@ -470,16 +391,8 @@ namespace Nowhere
         #endregion
 
         #region Jump
-        /******************************
-         ********     JUMP     ********
-         *****************************/
-
         private Coroutine   jumpCoroutine =     null;
 
-        /// <summary>
-        /// Makes the player start jumping.
-        /// </summary>
-        /// <returns>Return true if successfully started a jump, false otherwise.</returns>
         private bool Jump()
         {
             // Perform wall jump if against one.
@@ -519,19 +432,14 @@ namespace Nowhere
             return false;
         }
 
-        /// <summary>
-        /// Makes the player perform a "High" jump over time.
-        /// </summary>
         private IEnumerator HighJump()
         {
             isJumping = true;
             animator.SetTrigger(anim_JumpID);
 
-            // If moving, add extra X velocity to the player
+            // If moving, add extra X velocity to the player.
             if (movement.x != 0)
-            {
                 MoveHorizontally(facingSide * .5f);
-            }
 
             AddForce(new Vector2(movement.x * .5f, 0));
 
@@ -543,7 +451,7 @@ namespace Nowhere
             bool _isHolding = true;
 
             // While holding the jump button and havn't reached jump maximum duration,
-            // add more vertical velocity !
+            // add more vertical velocity!
             while (_time < _limit)
             {
                 // Move up
@@ -589,23 +497,24 @@ namespace Nowhere
             jumpCoroutine = null;
         }
 
-        /// <summary>
-        /// Makes the player perform a "Wall" jump over time.
-        /// </summary>
         private IEnumerator WallJump()
         {
             isJumping = true;
+            int _wallState = (int)wallStuckState;
 
-            // Trigger animation
+            // Trigger animation.
             animator.SetTrigger(anim_JumpID);
 
             // When performing a wall jump, add opposite side X velocity.
             ResetMovement();
-            Freeze(.05f);
+            Freeze(.065f + Time.deltaTime);
+            force.x = 0;
+
+            // Wait one frame to let all horizontal velocity being reset.
+            yield return null;
 
             if (force.y < 0) force.y *= .25f;
-            AddForce(new Vector2(attributes.WallJumpHorizontalForce * (int)wallStuckState, 0));
-
+            AddForce(new Vector2(attributes.WallJumpHorizontalForce * _wallState, 0));
 
             // Perform jump over time following the curve.
             float _time = 0;
@@ -661,9 +570,6 @@ namespace Nowhere
             jumpCoroutine = null;
         }
 
-        /// <summary>
-        /// Stops palyer's current jump.
-        /// </summary>
         public void StopJump()
         {
             if (isJumping)
@@ -677,19 +583,10 @@ namespace Nowhere
         #endregion
 
         #region Slide
-        /*******************************
-         ********     SLIDE     ********
-         ******************************/
-
         private Coroutine slideCoroutine = null;
 
-        /// <summary>
-        /// Makes the player start sliding.
-        /// </summary>
-        /// <returns>Return true if successfully started a slide, false otherwise.</returns>
         private bool Slide()
         {
-            // Return false if cannot slide
             if (isGrounded && !isJumping && !isSliding)
             {
                 slideCoroutine = StartCoroutine(DoSlide());
@@ -699,14 +596,11 @@ namespace Nowhere
             return false;
         }
 
-        /// <summary>
-        /// Makes the player perform a jump over time.
-        /// </summary>
         private IEnumerator DoSlide()
         {
             isSliding = true;
 
-            // Perform slide over time following the curve
+            // Perform slide over time following the curve.
             float _time = 0;
             float _limit = attributes.SlideCurve[attributes.SlideCurve.length - 1].time;
 
@@ -725,9 +619,6 @@ namespace Nowhere
             yield break;
         }
         
-        /// <summary>
-        /// Stops player's current slide.
-        /// </summary>
         public void StopSlide()
         {
             if (isSliding)
@@ -739,18 +630,11 @@ namespace Nowhere
         }
         #endregion
 
-        #endregion
-
         #region Monobehaviour
-        /*********************************
-         *****     MONOBEHAVIOUR     *****
-         ********************************/
-
         protected override void OnDisable()
         {
             base.OnDisable();
 
-            // Update unregistration
             if (isPlayable)
                 UpdateManager.Instance.Unregister((IInputUpdate)this);
         }
@@ -759,7 +643,6 @@ namespace Nowhere
         {
             base.OnEnable();
 
-            // Update registration
             if (isPlayable)
                 UpdateManager.Instance.Register((IInputUpdate)this);
         }

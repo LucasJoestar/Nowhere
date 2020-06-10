@@ -12,34 +12,22 @@ namespace Nowhere
     public class GameManager : MonoBehaviour
     {
         #region Fields / Properties
-        /***************************************
-         *****     FIELDS / PROPERTIES     *****
-         **************************************/
-
         /// <summary>
         /// Singleton instance.
         /// </summary>
-        public static GameManager   Instance            { get; private set; }
+        public static GameManager Instance { get; private set; }
 
-        // ------------------------------
+        // -----------------------
 
-        [SerializeField, Required]
-        private ProgramSettings     programSettings =   null;
+        [SerializeField, Required] private ProgramSettings programSettings = null;
 
         /// <summary>
-        /// Game global program settings.
+        /// Global Program Settings (can be accessed through <see cref="ProgramSettings.I"/>).
         /// </summary>
-        public ProgramSettings      ProgramSettings
-        {
-            get { return programSettings; }
-        }
+        public ProgramSettings ProgramSettings { get { return programSettings; } }
         #endregion
 
         #region Methods
-        /*********************************
-         *****     MONOBEHAVIOUR     *****
-         ********************************/
-
         private void Awake()
         {
             // Singleton set.

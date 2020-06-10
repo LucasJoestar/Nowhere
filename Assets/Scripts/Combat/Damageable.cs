@@ -11,15 +11,11 @@ namespace Nowhere
 {
     public class Damageable : MonoBehaviour 
     {
-        #region Fields / Properties
-        /**********************************
-         *********     FIELDS     *********
-         *********************************/
-
+        #region Fields
         [HorizontalLine(1, order = 0), Section("DAMAGEABLE", 50, 0, order = 1), HorizontalLine(2, SuperColor.SmokyBlack, order = 2)]
 
-        [SerializeField, Required] private Collider2D   hitBox =    null;
-        [SerializeField, Required] private Animator     animator =  null;
+        [SerializeField, Required] private Collider2D hitBox =  null;
+        [SerializeField, Required] private Animator animator =  null;
 
         [HorizontalLine(2, SuperColor.Indigo)]
 
@@ -31,15 +27,13 @@ namespace Nowhere
 
         [SerializeField, ReadOnly] private bool isDead = false;
 
-        // ---------------------------
+        // -----------------------
 
         private static readonly int anim_HitID =    Animator.StringToHash("Hit");
         private static readonly int anim_DeathID =  Animator.StringToHash("Death");
         #endregion
 
         #region Methods
-
-        #region Original Methods
         /// <summary>
         /// Make the object take a certain amount of damages.
         /// Returns false if the object is no longer alive, true otherwise.
@@ -66,19 +60,13 @@ namespace Nowhere
             // Deactivate object.
             hitBox.enabled = enabled = false;
         }
-        #endregion
 
-        #region Monobehaviour
-        /*********************************
-         *****     MONOBEHAVIOUR     *****
-         ********************************/
+        // -----------------------
 
         private void Start()
         {
             health = maxHealth;
         }
-        #endregion
-
         #endregion
     }
 }

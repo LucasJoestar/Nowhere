@@ -15,10 +15,10 @@ namespace EnhancedEditor.Editor
         [Serializable]
         private struct CoreSceneSettings
         {
-            public bool     IsEnable;
-            public bool     DoLoadActiveScenes;
+            public bool IsEnable;
+            public bool DoLoadActiveScenes;
 
-            public string   CoreScenePath;
+            public string CoreScenePath;
 
             // ----------------------------------------
 
@@ -31,29 +31,13 @@ namespace EnhancedEditor.Editor
         }
 
         #region Fields
-        /**********************************
-         *********     FIELDS     *********
-         *********************************/
+        private const string SettingsPrefs =         "CoreSceneSettings";
+        private const string StartingSessionState =  "IsStarting";
 
-        private const string        SettingsPrefs =             "CoreSceneSettings";
-        private const string        StartingSessionState =      "IsStarting";
-
-        // ----------------------------------------
-
-        private readonly GUIContent isEnableGUI =               new GUIContent(
-                                                                    "Enable",
-                                                                    "Is the core scene loading enable");
-
-        private readonly GUIContent doLoadActiveScenesGUI =     new GUIContent(
-                                                                    "Load active scene(s)",
-                                                                    "When enabled, active scenes in the hierarchy will be loaded after the core scene");
-
-        private readonly GUIContent coreScenePathGUI =          new GUIContent(
-                                                                    "Core scene path",
-                                                                    "Path of the scene to load when entering play mode");
-
-        // ----------------------------------------
-
+        private readonly GUIContent coreScenePathGUI =      new GUIContent("Core scene path", "Path of the scene to load when entering play mode");
+        private readonly GUIContent isEnableGUI =           new GUIContent("Enable", "Is the core scene loading enable");
+        private readonly GUIContent doLoadActiveScenesGUI = new GUIContent("Load active scene(s)",
+                                                                           "When enabled, active scenes in the hierarchy will be loaded after the core scene");
         /// <summary>
         /// ID used do display a help box at the bottom of the window :
         /// 
@@ -62,34 +46,21 @@ namespace EnhancedEditor.Editor
         /// • 1   :  Autoload scene registered
         /// • 2   :  Scene autoload disabled
         /// </summary>
-        private int                     messageID =             0;
+        private int messageID = 0;
 
-        // ----------------------------------------
-
-        [SerializeField]
-        private CoreSceneSettings       settings =              new CoreSceneSettings();
+        [SerializeField] private CoreSceneSettings settings = new CoreSceneSettings();
         #endregion
 
         #region Methods
 
         #region Editor Window
-        /*********************************
-         *****     Editor Window     *****
-         ********************************/
+        // -------------------------------------------
+        // Editor Window
+        // -------------------------------------------
 
-        /// <summary>
-        /// Get opened Core Scene system window or create one and show it.
-        /// </summary>
         [MenuItem("Enhanced Editor/Core Scene System")]
-        public static void GetWindow()
-        {
-            CoreSceneSystem _window = GetWindow<CoreSceneSystem>("Core Scene System");
-        }
+        public static void GetWindow() => GetWindow(typeof(CoreSceneSystem)).Show();
 
-        /// <summary>
-        /// Loads saved settings used for the Core Scene system.
-        /// </summary>
-        /// <returns></returns>
         private static CoreSceneSettings LoadSettings()
         {
             string _settings = EditorPrefs.GetString(SettingsPrefs, string.Empty);
@@ -100,17 +71,13 @@ namespace EnhancedEditor.Editor
                 return new CoreSceneSettings(false, true, "Assets/Core.unity");
         }
 
-        /// <summary>
-        /// Save modified properties in editor prefs.
-        /// </summary>
         private void Save()
         {
             EditorPrefs.SetString(SettingsPrefs, JsonUtility.ToJson(settings));
         }
 
-        /// <summary>
-        /// Get scene from registered path and set it as core one.
-        /// </summary>
+        // ----------------------------------------
+
         private void SetCoreScene()
         {
             SceneAsset _mainScene = AssetDatabase.LoadAssetAtPath<SceneAsset>(settings.CoreScenePath);
@@ -119,7 +86,7 @@ namespace EnhancedEditor.Editor
                 EditorSceneManager.playModeStartScene = _mainScene;
                 messageID = 1;
 
-                // Save changes
+                // Save changes.
                 Save();
             }
             else
@@ -135,10 +102,10 @@ namespace EnhancedEditor.Editor
 
         private void OnGUI()
         {
-            // Header
+            // Header draw.
             EditorGUILayout.LabelField("Core Scene System", EditorStyles.boldLabel);
 
-            // Top right window - Enable toggle
+            // Top right window - Enable toggle.
             EditorGUILayout.BeginHorizontal();
             GUILayout.FlexibleSpace();
 
@@ -151,7 +118,7 @@ namespace EnhancedEditor.Editor
                     EditorSceneManager.playModeStartScene = null;
                     messageID = 2;
 
-                    // Save changes
+                    // Save changes.
                     Save();
                 }  
                 else
@@ -162,19 +129,19 @@ namespace EnhancedEditor.Editor
 
             EditorGUILayout.EndHorizontal();
             
-            // Active scene(s) load parameter
+            // Active scene(s) load parameter.
             bool _doLoadActiveScenes = EditorGUILayout.Toggle(doLoadActiveScenesGUI, settings.DoLoadActiveScenes);
             if (_doLoadActiveScenes != settings.DoLoadActiveScenes)
             {
                 settings.DoLoadActiveScenes = _doLoadActiveScenes;
 
-                // Save changes
+                // Save changes.
                 Save();
             }
 
             EditorGUILayoutEnhanced.HorizontalLine(1, SuperColor.Grey.GetColor());
 
-            // Scene registration
+            // Scene registration.
             settings.CoreScenePath = EditorGUILayout.TextField(coreScenePathGUI, settings.CoreScenePath);
 
             EditorGUILayout.BeginHorizontal();
@@ -187,7 +154,7 @@ namespace EnhancedEditor.Editor
 
             EditorGUILayout.EndHorizontal();
 
-            // Display scene load informative message
+            // Display scene load informative message.
             switch (messageID)
             {
                 case -1:
@@ -211,20 +178,19 @@ namespace EnhancedEditor.Editor
                     break;
 
                 default:
-                    // Display nothing
+                    // Display nothing.
                     break;
             }
         }
         #endregion
 
-        #region Play Mode Load
-        /**********************************
-         *****     PLAY MODE LOAD     *****
-         *********************************/
+        #region Play Mode Loads
+        // -------------------------------------------
+        // Play Mode Loads
+        // -------------------------------------------
 
         private static string[]    activeScenes;
 
-        
         /// <summary>
         /// This method has two purpose :
         /// 

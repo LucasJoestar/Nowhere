@@ -12,13 +12,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61e94977d57c9124e858ac89a2a7908c, type: 3}
   m_Name: ProgramSettings
   m_EditorClassIdentifier: 
-  minGravity: -25
-  groundMinYNormal: 0.1
-  groundClimbHeight: 0.7
-  groundSnapHeight: 0.5
-  onGroundedHorizontalForceMultiplier: 0.35
-  groundDecelerationForce: 12.5
-  airDecelerationForce: 5
-  counterMovementSuperiorMultiplier: 1
-  counterMovementHalfMultiplier: 1
-  counterMovementDefaultMultiplier: 1
+  MaxGravity: -25
+  GroundClimbHeight: 0.7
+  GroundSnapHeight: 0.5
+  GroundMinYNormal: 0.1
+  OnGroundedHorizontalForceMultiplier: 0.35
+  GroundDecelerationForce: 12.5
+  AirDecelerationForce: 5

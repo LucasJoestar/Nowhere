@@ -1,4 +1,10 @@
-﻿namespace Nowhere
+﻿// ======= Created by Lucas Guibert - https://github.com/LucasJoestar ======= //
+//
+// Notes :
+//
+// ========================================================================== //
+
+namespace Nowhere
 {
     public static class BoolExtensions
     {
@@ -9,10 +15,7 @@
         /// </summary>
         /// <param name="_bool">Boolean to get sign from.</param>
         /// <returns>Returns this boolean sign as 1 or -1.</returns>
-        public static int Sign(this bool _bool)
-        {
-            return Mathm.Sign(_bool);
-        }
+        public static int Sign(this bool _bool) => Mathm.Sign(_bool);
         #endregion
     }
 }

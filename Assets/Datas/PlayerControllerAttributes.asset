@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07286b42b317e6b40aa2d8aeedf70500, type: 3}
   m_Name: PlayerControllerAttributes
   m_EditorClassIdentifier: 
-  speedCurve:
+  SpeedCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -36,13 +36,12 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  airSpeedAccelCoef: 0.65
-  groundMovementDecel: 75
-  airMovementDecel: 50
-  groundAboutTurnAccel: 6
-  airAboutTurnAccel: 6.25
-  groundSnapHeight: 0.25
-  highJumpCurve:
+  AirSpeedAccelCoef: 0.65
+  GroundMovementDecel: 75
+  AirMovementDecel: 50
+  GroundAboutTurnAccel: 6
+  AirAboutTurnAccel: 6.25
+  HighJumpCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -66,9 +65,10 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  coyoteTime: 0.15
-  jumpPeekDifference: 7
-  wallJumpCurve:
+  CoyoteTime: 0.15
+  JumpBufferTime: 0.15
+  JumpPeekDifference: 7
+  WallJumpCurve:
     serializedVersion: 2
     m_Curve:
     - serializedVersion: 3
@@ -92,11 +92,11 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  wallJumpHorizontalForce: -12
-  wallJumpGap: 0.25
-  wallStuckGravityCoef: 0.5
-  wallStuckMinGravityCoef: 0.75
-  slideCurve:
+  WallJumpHorizontalForce: -12
+  WallJumpGap: 0.25
+  WallStuckGravityCoef: 0.5
+  WallStuckMinGravityCoef: 0.75
+  SlideCurve:
     serializedVersion: 2
     m_Curve: []
     m_PreInfinity: 2

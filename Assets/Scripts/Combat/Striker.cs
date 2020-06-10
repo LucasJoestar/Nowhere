@@ -12,11 +12,7 @@ namespace Nowhere
 {
     public class Striker : MonoBehaviour, IUpdate
     {
-        #region Fields / Properties
-        /**********************************
-         *********     FIELDS     *********
-         *********************************/
-
+        #region Fields
         [HorizontalLine(1, order = 0), Section("STRIKER", 50, 0, order = 1), HorizontalLine(2, SuperColor.HarvestGold, order = 2)]
 
         [SerializeField, Required] private Collider2D strikeBox = null;
@@ -28,8 +24,8 @@ namespace Nowhere
 
         [HorizontalLine(2, SuperColor.Lavender)]
 
-        [SerializeField, ReadOnly] protected bool   isAttacking =   false;
-        [SerializeField, ReadOnly] protected Attack activeAttack =  null;
+        [SerializeField, ReadOnly] protected bool isAttacking = false;
+        [SerializeField, ReadOnly] protected Attack activeAttack = null;
 
         // --------------
 
@@ -37,6 +33,8 @@ namespace Nowhere
         #endregion
 
         #region Methods
+
+        #region Attack System
         /// <summary>
         /// Activates the attack from <see cref="attacks"/> at the specified index.
         /// </summary>
@@ -51,9 +49,6 @@ namespace Nowhere
             attackVictims.Clear();
         }
 
-        /// <summary>
-        /// Stop attacking.
-        /// </summary>
         public virtual void StopAttack()
         {
             if (isAttacking)
@@ -70,6 +65,9 @@ namespace Nowhere
         private static Collider2D[] overlapBuffer = new Collider2D[6];
         private int overlapBufferAmount = 0;
 
+        /// <summary>
+        /// While active, strike all overlapping objects once.
+        /// </summary>
         void IUpdate.Update()
         {
             overlapBufferAmount = strikeBox.OverlapCollider(contactFilter, overlapBuffer);
@@ -93,10 +91,6 @@ namespace Nowhere
         #endregion
 
         #region Monobehaviour
-        /*********************************
-         *****     MONOBEHAVIOUR     *****
-         ********************************/
-
         private void OnDisable()
         {
             StopAttack();
@@ -104,10 +98,13 @@ namespace Nowhere
 
         private void Start()
         {
+            // Set up contact filter.
             contactFilter.layerMask = Physics2D.GetLayerCollisionMask(strikeBox.gameObject.layer);
             contactFilter.useLayerMask = true;
             contactFilter.useTriggers = true;
         }
+        #endregion
+
         #endregion
     }
 }

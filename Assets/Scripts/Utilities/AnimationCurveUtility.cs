@@ -1,4 +1,10 @@
-﻿using UnityEngine;
+﻿// ======= Created by Lucas Guibert - https://github.com/LucasJoestar ======= //
+//
+// Notes :
+//
+// ========================================================================== //
+
+using UnityEngine;
 
 namespace Nowhere
 {
@@ -9,7 +15,7 @@ namespace Nowhere
         /// Increase a value following an animation curve
         /// according to a given timer.
         /// </summary>
-        /// <param name="_curve">Refrence curve to evaluate.</param>
+        /// <param name="_curve">Reference curve to evaluate.</param>
         /// <param name="_value">Value to increase.</param>
         /// <param name="_time">Animation curve reference time.</param>
         public static float IncreaseValue(AnimationCurve _curve, float _value, ref float _time)
@@ -27,7 +33,7 @@ namespace Nowhere
         /// Increase a value following an animation curve
         /// according to a given timer.
         /// </summary>
-        /// <param name="_curve">Refrence curve to evaluate.</param>
+        /// <param name="_curve">Reference curve to evaluate.</param>
         /// <param name="_value">Value to increase.</param>
         /// <param name="_time">Animation curve reference time.</param>
         /// <param name="_increaseCoef">Coefficient applied to time increase.</param>
