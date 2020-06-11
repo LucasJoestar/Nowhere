@@ -5,7 +5,6 @@
 // ========================================================================== //
 
 using EnhancedEditor;
-using System.Collections;
 using UnityEngine;
 
 namespace Nowhere
@@ -46,6 +45,20 @@ namespace Nowhere
                 animator.SetTrigger("Attack 3");
                 return;
             }
+
+            // ---------- Cheat Codes ---------- //
+
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+                PlayerCamera.Instance.Shake(.1f);
+
+            if (Input.GetKeyDown(KeyCode.Alpha2))
+                PlayerCamera.Instance.Shake(.25f);
+
+            if (Input.GetKeyDown(KeyCode.Alpha3))
+                PlayerCamera.Instance.Shake(.5f);
+
+            if (Input.GetKeyDown(KeyCode.Alpha4))
+                PlayerCamera.Instance.Shake(1f);
         }
         #endregion
 
@@ -57,21 +70,8 @@ namespace Nowhere
         {
             base.Strike(_victim);
 
-            StartCoroutine(StrikeFeedback());
-        }
-
-        private IEnumerator StrikeFeedback()
-        {
-            float _timer = .05f;
-            Time.timeScale = 0;
-
-            while (_timer > 0)
-            {
-                yield return null;
-                _timer -= Time.unscaledDeltaTime;
-            } 
-
-            Time.timeScale = 1;
+            GameManager.Instance.Sleep(.04f);
+            PlayerCamera.Instance.Shake(.25f);
         }
         #endregion
 
@@ -81,8 +81,10 @@ namespace Nowhere
             UpdateManager.Instance.Register((IInputUpdate)this);
         }
 
-        private void OnDisable()
+        protected override void OnDisableCallback()
         {
+            base.OnDisableCallback();
+
             UpdateManager.Instance.Unregister((IInputUpdate)this);
         }
         #endregion

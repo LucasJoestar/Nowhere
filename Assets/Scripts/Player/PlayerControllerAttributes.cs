@@ -30,10 +30,6 @@ namespace Nowhere
         [Min(0)] public float GroundAboutTurnAccel = 6f;
         [Min(0)] public float AirAboutTurnAccel = 5f;
 
-        [HorizontalLine(1)]
-
-        [Range(0, 1)] private float GroundSnapHeight = .25f;
-
         [HorizontalLine(2, SuperColor.Raspberry)]
 
         public AnimationCurve HighJumpCurve = null;

@@ -111,7 +111,8 @@ namespace Nowhere
                 }
             }
 
-            // CHEAT CODES
+            // ---------- Cheat Codes ---------- //
+
             if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.F)) AddForce(new Vector2(facingSide * 20, 0));
         }
 
@@ -631,20 +632,20 @@ namespace Nowhere
         #endregion
 
         #region Monobehaviour
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-
-            if (isPlayable)
-                UpdateManager.Instance.Unregister((IInputUpdate)this);
-        }
-
         protected override void OnEnable()
         {
             base.OnEnable();
 
             if (isPlayable)
                 UpdateManager.Instance.Register((IInputUpdate)this);
+        }
+
+        protected override void OnDisableCallback()
+        {
+            base.OnDisableCallback();
+
+            if (isPlayable)
+                UpdateManager.Instance.Unregister((IInputUpdate)this);
         }
         #endregion
 

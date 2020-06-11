@@ -5,26 +5,44 @@
 // ========================================================================== //
 
 using EnhancedEditor;
+using System.Collections;
 using UnityEngine;
 
 namespace Nowhere
 {
-    public class PlayerCamera : MonoBehaviour, ICameraUpdate
+    public class PlayerCamera : UpdatedBehaviour, ICameraUpdate
     {
         #region Fields
+        /// <summary>
+        /// Singleton instance.
+        /// </summary>
+        public static PlayerCamera Instance { get; private set; }
+
+        // -----------------------
+
         [Section("CAMERA", 50, 0, order = 0), HorizontalLine(2, SuperColor.Chocolate, order = 1)]
 
-        [SerializeField, Required] private PlayerCameraAttributes   attributes =    null;
-        [SerializeField, Required] private new Camera               camera =        null;
+        [SerializeField, Required] private PlayerCameraAttributes attributes = null;
+        [SerializeField, Required] private new Camera camera = null;
 
         [HorizontalLine(1, order = 0)]
 
         [HelpBox("Followed target, kept between screen center related bounds", HelpBoxType.Info, order = 1)]
         [SerializeField] private Collider2D target = null;
 
+        [HorizontalLine(2, SuperColor.Crimson)]
+
+        [SerializeField, Min(0)] private float shakeForce =     1;
+        [SerializeField, Min(0)] private float shakeSoftening = .5f;
+        [SerializeField, Min(0)] private int shakeTraumaPower = 2;
+
+        [SerializeField] private float shakeMaxAngle = 10;
+        [SerializeField] private Vector2 shakeMaxOffset = Vector2.one;
+
         [HorizontalLine(2, SuperColor.Sapphire)]
 
         [SerializeField, ReadOnly] private bool isMoving = false;
+        [SerializeField, ReadOnly] private float shakeTrauma = 0;
 
         // -----------------------
 
@@ -99,16 +117,64 @@ namespace Nowhere
             return _bounds;
         }
 
+        #region Screenshake
+        private Coroutine screenshakeCoroutine = null;
+
         // -----------------------
 
-        private void OnDisable()
+        public void Shake(float _trauma)
         {
-            UpdateManager.Instance.Unregister(this);
+            shakeTrauma = Mathf.Clamp01(shakeTrauma + _trauma);
+
+            if (screenshakeCoroutine == null)
+                screenshakeCoroutine = StartCoroutine(DoShake());
+        }
+
+        private IEnumerator DoShake()
+        {
+            while (shakeTrauma > 0)
+            {
+                yield return null;
+
+                shakeTrauma = Mathf.Max(shakeTrauma - (Time.deltaTime * shakeSoftening), 0);
+                float _trauma = Mathf.Pow(shakeTrauma, shakeTraumaPower);
+
+                float _angle = shakeMaxAngle * _trauma * ((Mathf.PerlinNoise(0, Time.time * shakeForce) * 2) - 1);
+                float _offsetX = shakeMaxOffset.x * _trauma * ((Mathf.PerlinNoise(1, Time.time * shakeForce) * 2) - 1);
+                float _offsetY = shakeMaxOffset.y * _trauma * ((Mathf.PerlinNoise(2, Time.time * shakeForce) * 2) - 1);
+
+                camera.transform.localEulerAngles = new Vector3(0, 0, _angle);
+                camera.transform.localPosition = new Vector3(_offsetX, _offsetY, 0);
+            }
+
+            screenshakeCoroutine = null;
+        }
+        #endregion
+
+        #region Monobehaviour
+        private void Awake()
+        {
+            // Singleton set.
+            if (!Instance)
+                Instance = this;
+            else
+                Destroy(gameObject);
         }
 
         private void OnEnable()
         {
             UpdateManager.Instance.Register(this);
+        }
+
+        protected override void OnDisableCallback()
+        {
+            UpdateManager.Instance.Unregister(this);
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+                Instance = null;
         }
 
         #if UNITY_EDITOR
@@ -126,6 +192,8 @@ namespace Nowhere
             }
         }
         #endif
+
+        #endregion
 
         #endregion
     }

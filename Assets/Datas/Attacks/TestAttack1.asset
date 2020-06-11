@@ -12,4 +12,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: df7bbe2202238c544a079e44b813164a, type: 3}
   m_Name: TestAttack1
   m_EditorClassIdentifier: 
-  damages: 3
+  Damages: 10

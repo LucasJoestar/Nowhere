@@ -23,7 +23,7 @@ namespace Nowhere
     }
 
     [RequireComponent(typeof(Rigidbody2D))]
-    public class Movable : MonoBehaviour, IMovableUpdate, IPhysicsUpdate
+    public class Movable : UpdatedBehaviour, IMovableUpdate, IPhysicsUpdate
     {
         #region Fields / Properties
         protected const float   castMaxDistanceDetection =      .001f;
@@ -852,20 +852,20 @@ namespace Nowhere
         #endregion
 
         #region Monobehaviour
-        protected virtual void OnDisable()
-        {
-            if (isAwake)
-                UpdateManager.Instance.Unregister((IMovableUpdate)this);
-            if (useGravity)
-                UpdateManager.Instance.Unregister((IPhysicsUpdate)this);
-        }
-
         protected virtual void OnEnable()
         {
             if (isAwake)
                 UpdateManager.Instance.Register((IMovableUpdate)this);
             if (useGravity)
                 UpdateManager.Instance.Register((IPhysicsUpdate)this);
+        }
+
+        protected override void OnDisableCallback()
+        {
+            if (isAwake)
+                UpdateManager.Instance.Unregister((IMovableUpdate)this);
+            if (useGravity)
+                UpdateManager.Instance.Unregister((IPhysicsUpdate)this);
         }
 
         protected virtual void Start()

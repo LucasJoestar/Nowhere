@@ -41,7 +41,6 @@ namespace Nowhere
         public virtual bool TakeDamage(int _damages)
         {
             health -= _damages;
-
             animator.SetTrigger(anim_HitID);
 
             if (health > 0)

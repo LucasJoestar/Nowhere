@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Nowhere
 {
-    public class Striker : MonoBehaviour, IUpdate
+    public class Striker : UpdatedBehaviour, IUpdate
     {
         #region Fields
         [HorizontalLine(1, order = 0), Section("STRIKER", 50, 0, order = 1), HorizontalLine(2, SuperColor.HarvestGold, order = 2)]
@@ -26,6 +26,13 @@ namespace Nowhere
 
         [SerializeField, ReadOnly] protected bool isAttacking = false;
         [SerializeField, ReadOnly] protected Attack activeAttack = null;
+
+        // --------------
+
+        #if UNITY_EDITOR
+        [HorizontalLine(2, SuperColor.Brown)]
+        [SerializeField] private bool doDrawStrikeBox = false;
+        #endif
 
         // --------------
 
@@ -63,7 +70,7 @@ namespace Nowhere
         private List<Collider2D> attackVictims = new List<Collider2D>();
 
         private static Collider2D[] overlapBuffer = new Collider2D[6];
-        private int overlapBufferAmount = 0;
+        private static int overlapBufferAmount = 0;
 
         /// <summary>
         /// While active, strike all overlapping objects once.
@@ -91,7 +98,7 @@ namespace Nowhere
         #endregion
 
         #region Monobehaviour
-        private void OnDisable()
+        protected override void OnDisableCallback()
         {
             StopAttack();
         }
@@ -103,6 +110,23 @@ namespace Nowhere
             contactFilter.useLayerMask = true;
             contactFilter.useTriggers = true;
         }
+
+        #if UNITY_EDITOR
+        private static readonly Color gizmosColor = new Color(1, 0, 0, .5f);
+        private void OnDrawGizmos()
+        {
+            if ((doDrawStrikeBox || isAttacking) && strikeBox)
+            {
+                Color _originalColor = Gizmos.color;
+                Gizmos.color = gizmosColor;
+
+                Gizmos.DrawCube(strikeBox.bounds.center, strikeBox.bounds.size);
+
+                Gizmos.color = _originalColor;
+            }
+        }
+        #endif
+
         #endregion
 
         #endregion

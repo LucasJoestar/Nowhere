@@ -20,10 +20,7 @@ public class AutoSaver : EditorWindow
     [MenuItem("Tools/Auto Saver")]
     public static void Get() => GetWindow(typeof(AutoSaver)).Show();
 
-    /// <summary>
-    /// Save the current open edited scene.
-    /// </summary>
-    private void SaveScene()
+    private void SaveScenes()
     {
         // If the application is playing, do not save
         if (EditorApplication.isPlaying)
@@ -54,7 +51,7 @@ public class AutoSaver : EditorWindow
 
         // Save the scene when auto save is set enabled.
         if (EditorGUI.EndChangeCheck() && isAutoSave)
-            SaveScene();
+            SaveScenes();
 
         // ---------- Show Time Values ---------- //
 
@@ -82,7 +79,7 @@ public class AutoSaver : EditorWindow
     void Update()
     {
         if (isAutoSave && !EditorApplication.isPlaying && (EditorApplication.timeSinceStartup >= nextSaveTime))
-            SaveScene();
+            SaveScenes();
 	}
     #endregion
 }
