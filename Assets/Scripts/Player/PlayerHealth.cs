@@ -19,6 +19,15 @@ namespace Nowhere
         #endregion
 
         #region Methods
+        public override bool TakeDamage(int _damages)
+        {
+            if (!base.TakeDamage(_damages))
+                return false;
+
+            combatSystem.ComboBreaker();
+            return true;
+        }
+
         protected override void Die()
         {
             base.Die();

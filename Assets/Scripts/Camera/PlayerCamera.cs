@@ -27,17 +27,10 @@ namespace Nowhere
 
         [HorizontalLine(1, order = 0)]
 
-        [HelpBox("Followed target, kept between screen center related bounds", HelpBoxType.Info, order = 1)]
-        [SerializeField] private Collider2D target = null;
-
-        [HorizontalLine(2, SuperColor.Crimson)]
-
-        [SerializeField, Min(0)] private float shakeForce =     1;
-        [SerializeField, Min(0)] private float shakeSoftening = .5f;
-        [SerializeField, Min(0)] private int shakeTraumaPower = 2;
-
-        [SerializeField] private float shakeMaxAngle = 10;
-        [SerializeField] private Vector2 shakeMaxOffset = Vector2.one;
+        [HelpBox("Followed player, kept between screen center related bounds", HelpBoxType.Info, order = 1)]
+        [SerializeField, ReadOnly] private bool isPlayerAssigned = false;
+        [SerializeField, ReadOnly] private Collider2D player = null;
+        private float facingSide = 1;
 
         [HorizontalLine(2, SuperColor.Sapphire)]
 
@@ -56,17 +49,19 @@ namespace Nowhere
         #endregion
 
         #region Methods
+
+        #region Player
         /// <summary>
         /// Update the camera position and make it follow its target.
         /// </summary>
         void ICameraUpdate.Update()
         {
-            if (!target)
+            if (!isPlayerAssigned)
                 return;
 
             // Initialization
-            Bounds _bounds = GetTargetBounds();
-            Bounds _target = target.bounds;
+            Bounds _bounds = GetPlayerBounds();
+            Bounds _target = player.bounds;
             Vector2 _movement = Vector2.zero;
 
             // Horizontal movement.
@@ -106,16 +101,45 @@ namespace Nowhere
                 isMoving = true;
 
             // Move 10% closer to the target each frame.
-            _movement *= .1f;
+            _movement *= attributes.Speed;
             transform.position = new Vector3(transform.position.x + _movement.x, transform.position.y + _movement.y, -10);
         }
 
-        private Bounds GetTargetBounds()
+        private Bounds GetPlayerBounds()
         {
             Bounds _bounds = attributes.TargetBounds;
-            _bounds.center += transform.position;
+            _bounds.center = new Vector3(_bounds.center.x * facingSide, _bounds.center.y, _bounds.center.z) + transform.position;
             return _bounds;
         }
+
+        // -----------------------
+
+        /// <summary>
+        /// Set player facing side.
+        /// </summary>
+        public void SetFacingSide(float _facingSide)
+        {
+            facingSide = _facingSide;
+        }
+
+        /// <summary>
+        /// Set player collider to follow.
+        /// </summary>
+        public void SetPlayer(Collider2D _playerCollider)
+        {
+            isPlayerAssigned = true;
+            player = _playerCollider;
+        }
+
+        /// <summary>
+        /// Remove player to follow.
+        /// </summary>
+        public void RemovePlayer()
+        {
+            isPlayerAssigned = false;
+            player = null;
+        }
+        #endregion
 
         #region Screenshake
         private Coroutine screenshakeCoroutine = null;
@@ -134,19 +158,21 @@ namespace Nowhere
         {
             while (shakeTrauma > 0)
             {
-                yield return null;
+                float _trauma = Mathf.Pow(shakeTrauma, attributes.ShakeTraumaPower);
 
-                shakeTrauma = Mathf.Max(shakeTrauma - (Time.deltaTime * shakeSoftening), 0);
-                float _trauma = Mathf.Pow(shakeTrauma, shakeTraumaPower);
-
-                float _angle = shakeMaxAngle * _trauma * ((Mathf.PerlinNoise(0, Time.time * shakeForce) * 2) - 1);
-                float _offsetX = shakeMaxOffset.x * _trauma * ((Mathf.PerlinNoise(1, Time.time * shakeForce) * 2) - 1);
-                float _offsetY = shakeMaxOffset.y * _trauma * ((Mathf.PerlinNoise(2, Time.time * shakeForce) * 2) - 1);
+                float _angle = attributes.ShakeMaxAngle * _trauma * ((Mathf.PerlinNoise(0, Time.time * attributes.ShakeForce) * 2) - 1);
+                float _offsetX = attributes.ShakeMaxOffset.x * _trauma * ((Mathf.PerlinNoise(1, Time.time * attributes.ShakeForce) * 2) - 1);
+                float _offsetY = attributes.ShakeMaxOffset.y * _trauma * ((Mathf.PerlinNoise(2, Time.time * attributes.ShakeForce) * 2) - 1);
 
                 camera.transform.localEulerAngles = new Vector3(0, 0, _angle);
                 camera.transform.localPosition = new Vector3(_offsetX, _offsetY, 0);
+
+                yield return null;
+                shakeTrauma = Mathf.Max(shakeTrauma - (Time.deltaTime * attributes.ShakeSoftening), 0);
             }
 
+            camera.transform.localEulerAngles = Vector3.zero;
+            camera.transform.localPosition = Vector3.zero;
             screenshakeCoroutine = null;
         }
         #endregion
@@ -186,7 +212,7 @@ namespace Nowhere
                 Color _originalColor = Gizmos.color;
                 Gizmos.color = boundsColor.GetColor();
 
-                Gizmos.DrawWireCube(GetTargetBounds().center + Vector3.forward, attributes.TargetBounds.size);
+                Gizmos.DrawWireCube(GetPlayerBounds().center + Vector3.forward, attributes.TargetBounds.size);
 
                 Gizmos.color = _originalColor;
             }

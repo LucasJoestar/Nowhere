@@ -29,6 +29,11 @@ namespace Nowhere
 
         // -----------------------
 
+        [SerializeField, ReadOnly] private bool isGamePaused = false;
+        public bool IsGamePaused { get { return isGamePaused; } }
+
+        // -----------------------
+
         public bool IsQuittingApplication { get; private set; } = false;
         #endregion
 
@@ -54,6 +59,7 @@ namespace Nowhere
         private IEnumerator DoSleep()
         {
             Time.timeScale = 0;
+            isGamePaused = true;
 
             while (sleepTimer > 0)
             {
@@ -61,6 +67,7 @@ namespace Nowhere
                 sleepTimer -= Time.unscaledDeltaTime;
             }
 
+            isGamePaused = false;
             Time.timeScale = 1;
             sleepCoroutine = null;
         }

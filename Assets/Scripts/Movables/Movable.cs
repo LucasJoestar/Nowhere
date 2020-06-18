@@ -33,8 +33,8 @@ namespace Nowhere
 
         [Section("MOVABLE", 50, 0, order = 0), HorizontalLine(2, SuperColor.Sapphire, order = 1)]
 
-        [SerializeField, Required] private new Collider2D collider =    null;
-        [SerializeField, Required] private new Rigidbody2D rigidbody =  null;
+        [SerializeField, Required] protected new Collider2D collider =    null;
+        [SerializeField, Required] protected new Rigidbody2D rigidbody =  null;
 
         [HorizontalLine(2, SuperColor.Crimson)]
 
@@ -131,6 +131,9 @@ namespace Nowhere
         [SerializeField, ReadOnly] protected int facingSide =   1;
         [SerializeField, ReadOnly] protected bool isGrounded =  false;
 
+        public int FacingSide { get { return facingSide; } }
+        public bool IsGrounded { get { return isGrounded; } }
+
         [HorizontalLine(2, SuperColor.Indigo)]
 
         [SerializeField, Min(0)] protected float speed =        1;
@@ -148,9 +151,9 @@ namespace Nowhere
 
         [HorizontalLine(2, SuperColor.Pumpkin)]
 
-        [SerializeField] protected Vector2  force =         Vector2.zero;
-        [SerializeField] protected Vector2  instantForce =  Vector2.zero;
-        [SerializeField] protected Vector2  movement =      Vector2.zero;
+        [SerializeField] protected Vector2 force =          Vector2.zero;
+        [SerializeField] protected Vector2 instantForce =   Vector2.zero;
+        [SerializeField] protected Vector2 movement =       Vector2.zero;
 
         // -----------------------
 
@@ -833,17 +836,17 @@ namespace Nowhere
 
         // -----------------------
 
-        private static Collider2D[] extractionBuffer = new Collider2D[6];
+        protected static Collider2D[] overlapBuffer = new Collider2D[6];
 
         private void ExtractFromCollisions()
         {
-            int _count = collider.OverlapCollider(contactFilter, extractionBuffer);
+            int _count = collider.OverlapCollider(contactFilter, overlapBuffer);
             ColliderDistance2D _distance;
 
             for (int _i = 0; _i < _count; _i++)
             {
                 // If overlap, extract from collision.
-                _distance = collider.Distance(extractionBuffer[_i]);
+                _distance = collider.Distance(overlapBuffer[_i]);
 
                 if (_distance.isOverlapped)
                     rigidbody.position += _distance.normal * _distance.distance;

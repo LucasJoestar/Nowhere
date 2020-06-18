@@ -112,6 +112,9 @@ namespace Nowhere
 
         private void Update()
         {
+            if (GameManager.Instance.IsGamePaused)
+                return;
+
             // Call all registered interface updates.
             int _i;
             for (_i = 0; _i < inputUpdates.Count; _i++)

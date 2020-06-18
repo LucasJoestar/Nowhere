@@ -38,7 +38,7 @@ namespace Nowhere
         public bool IsPlayable
         {
             get { return isPlayable; }
-            private set
+            set
             {
                 #if UNITY_EDITOR
                 if (!Application.isPlaying) return;
@@ -64,6 +64,7 @@ namespace Nowhere
         [SerializeField, ReadOnly] private bool isMoving =      false;
         [SerializeField, ReadOnly] private bool isJumping =     false;
         [SerializeField, ReadOnly] private bool isSliding =     false;
+        [SerializeField, ReadOnly] private bool isCrouched =    false;
         [SerializeField, ReadOnly] private bool isAtJumpPeek =  false;
 
         [SerializeField, ReadOnly] private WallStuck wallStuckState = WallStuck.None;
@@ -86,43 +87,68 @@ namespace Nowhere
         private readonly int anim_IsMovingID =      Animator.StringToHash("IsMoving");
         private readonly int anim_IsWallStuckID =   Animator.StringToHash("IsWallStuck");
         private readonly int anim_JumpID =          Animator.StringToHash("Jump");
+        private readonly int anim_SlideID =         Animator.StringToHash("IsSliding");
+        private readonly int anim_CrouchID =        Animator.StringToHash("IsCrouched");
 
         private float coyoteTimeVar = 0;
+        private float jumpBufferVar = 0;
+        private float SlideBufferVar = 0;
         #endregion
 
         #region Methods
 
         #region Inputs
-        private float jumpBufferDown = 0;
-
         /// <summary>
         /// Check player inputs and execute movement or other actions.
         /// </summary>
         void IInputUpdate.Update()
         {
             float _movement = Input.GetAxis("Horizontal");
-            if (_movement != 0) MoveHorizontally(_movement);
+            if (_movement != 0 && !isSliding)
+            {
+                MoveHorizontally(_movement);
+                PlayerCamera.Instance.SetFacingSide(Mathf.Sign(_movement));
+            }
 
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
             {
                 if (!Jump())
+                    jumpBufferVar = Time.time;
+            }
+            if ((Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Joystick1Button1)) &&
+                (Mathf.Abs(lastMovement + force.x) > attributes.SlideRequiredVelocity))
+            {
+                if (!Slide())
+                    SlideBufferVar = Time.time;
+            }
+            if (isGrounded && !isSliding)
+            {
+                if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Joystick1Button1))
                 {
-                    jumpBufferDown = Time.time;
+                    if (!isCrouched)
+                        Crouch();
+                }
+                else if (isCrouched)
+                {
+                    GetUp();
                 }
             }
 
             // ---------- Cheat Codes ---------- //
 
-            if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.F)) AddForce(new Vector2(facingSide * 20, 0));
+            if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.F))
+                AddForce(new Vector2(facingSide * 20, 0));
         }
 
-        private void ConsumeJumpBuffer()
+        private bool ConsumeJumpBuffer()
         {
-            if ((Time.time - jumpBufferDown < attributes.JumpBufferTime) &&
+            if ((Time.time - jumpBufferVar < attributes.JumpBufferTime) &&
                 (Input.GetKey(KeyCode.Space) || Input.GetKey(KeyCode.Joystick1Button0)))
             {
-                Jump();
+                return Jump();
             }
+
+            return false;
         }
         #endregion
 
@@ -148,6 +174,9 @@ namespace Nowhere
             {
                 speed = AnimationCurveUtility.IncreaseValue(attributes.SpeedCurve, speed, ref speedCurveVarTime, isGrounded ? 1 : attributes.AirSpeedAccelCoef);
                 _movement *= speed;
+
+                if (isCrouched)
+                    _movement *= attributes.CrouchSpeedCoef;
 
                 base.MoveHorizontally(_movement);
             }
@@ -312,12 +341,16 @@ namespace Nowhere
 
         // -----------------------
 
+        private bool hasJustLanded = false;
+
         /// <summary>
         /// Called after velocity has been applied.
         /// </summary>
         protected override void OnAppliedVelocity(Vector2 _movement)
         {
             base.OnAppliedVelocity(_movement);
+
+            hasJustLanded = false;
 
             // Player moving state.
             bool _isMoving = (lastMovement != 0) && (Mathf.Abs(_movement.x) > .0001f);
@@ -326,9 +359,11 @@ namespace Nowhere
             {
                 isMoving = _isMoving;
                 animator.SetBool(anim_IsMovingID, _isMoving);
+
+                if (!_isMoving)
+                    StopSlide();
             }
                 
-
             // Reset movement if not moving.
             if (!_isMoving && (speed > 0))
                 ResetMovement();
@@ -336,7 +371,6 @@ namespace Nowhere
             // Set animator ground state.
             if (!isGrounded)
                 animator.SetInteger(anim_GroundStateID, _movement.y < 0 ? -1 : 1);
-
 
             // Stop jumping when hurting horizontal surfaces.
             if (isJumping)
@@ -374,6 +408,8 @@ namespace Nowhere
 
             if (isGrounded)
             {
+                hasJustLanded = true;
+
                 StopJump();
 
                 if (wallStuckState != WallStuck.None)
@@ -382,12 +418,20 @@ namespace Nowhere
                 transform.rotation = Quaternion.identity;
                 animator.SetInteger(anim_GroundStateID, 0);
 
-                ConsumeJumpBuffer();
+                if (!ConsumeJumpBuffer() && (Time.time - SlideBufferVar < attributes.SlideBufferTime) &&
+                (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Joystick1Button1)) &&
+                (Mathf.Abs(lastMovement + force.x) > attributes.SlideRequiredVelocity))
+                {
+                    Slide();
+                }
             }
 
             // Set last time the player left a platform.
             else
+            {
+                GetUp();
                 coyoteTimeVar = Time.time;
+            }
         }
         #endregion
 
@@ -455,14 +499,14 @@ namespace Nowhere
             // add more vertical velocity!
             while (_time < _limit)
             {
-                // Move up
+                // Move up.
                 MoveVertically(attributes.HighJumpCurve.Evaluate(_time));
 
                 // If releasing jump button before max duration,
                 // continue adding some intertia.
                 if (_isHolding)
                 {
-                    if (Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.Joystick1Button0))
+                    if (!Input.GetKey(KeyCode.Space) && !Input.GetKey(KeyCode.Joystick1Button0))
                     {
                         _isHolding = false;
 
@@ -535,7 +579,7 @@ namespace Nowhere
                 // continue adding some intertia.
                 if (_isHolding)
                 {
-                    if (Input.GetKeyUp(KeyCode.Space) || Input.GetKeyUp(KeyCode.Joystick1Button0))
+                    if (!Input.GetKey(KeyCode.Space) && !Input.GetKey(KeyCode.Joystick1Button0))
                     {
                         _isHolding = false;
 
@@ -588,7 +632,7 @@ namespace Nowhere
 
         private bool Slide()
         {
-            if (isGrounded && !isJumping && !isSliding)
+            if (isGrounded && !isJumping && !isSliding && !isCrouched)
             {
                 slideCoroutine = StartCoroutine(DoSlide());
                 return true;
@@ -600,21 +644,58 @@ namespace Nowhere
         private IEnumerator DoSlide()
         {
             isSliding = true;
+            animator.SetBool(anim_SlideID, true);
+
+            float _momentum = Mathf.Clamp((lastMovement + force.x) / attributes.SpeedCurve[attributes.SpeedCurve.length - 1].value, -1, 1);
+            float _maxMomentum = _momentum * attributes.SlideMaxMomentumCoef;
+            float _minMomentum = _momentum * attributes.SlideMinMomentumCoef;
+            float _movement = _maxMomentum;
+
+            float _forceMomentum = lastMovement * attributes.SlideForceCoef;
+
+            if (hasJustLanded)
+            {
+                _maxMomentum *= attributes.SlideOnLandCoef;
+                _forceMomentum *= attributes.SlideOnLandCoef;
+            }
+
+            // If moving, add extra X velocity to the player.
+            AddForce(new Vector2(_forceMomentum, 0));
 
             // Perform slide over time following the curve.
             float _time = 0;
-            float _limit = attributes.SlideCurve[attributes.SlideCurve.length - 1].time;
+            float _limit = attributes.SlideDuration;
+            float _treshold = _limit * .85f;
 
-            while (true)
+            bool _isHolding = true;
+
+            // While holding the slide button and havn't reached slide maximum duration,
+            // add more movement.
+            while (_time < _limit)
             {
-                if (_time == _limit)
-                    break;
+                // Move on.
+                MoveHorizontally(_movement);
+                _movement = Mathf.SmoothStep(_maxMomentum, _minMomentum, _time / _limit);
+
+                // If releasing slide button before max duration,
+                // continue adding some intertia.
+                if ((_time > .25f) && _isHolding && !Input.GetKey(KeyCode.C) && !Input.GetKey(KeyCode.Joystick1Button1))
+                {
+                    _isHolding = false;
+
+                    if (_time < _treshold)
+                        _time = _treshold;
+                }
 
                 yield return null;
                 _time = Mathf.Min(_time + Time.deltaTime, _limit);
             }
 
             isSliding = false;
+            if (Input.GetKey(KeyCode.C) || Input.GetKey(KeyCode.Joystick1Button1) || !CanGetUp())
+                Crouch();
+
+            animator.SetBool(anim_SlideID, false);
             slideCoroutine = null;
 
             yield break;
@@ -625,8 +706,34 @@ namespace Nowhere
             if (isSliding)
             {
                 isSliding = false;
+                animator.SetBool(anim_SlideID, false);
                 StopCoroutine(slideCoroutine);
                 slideCoroutine = null;
+            }
+        }
+        #endregion
+
+        #region Crouch
+        public void Crouch()
+        {
+            if (!isCrouched)
+            {
+                isCrouched = true;
+                animator.SetBool(anim_CrouchID, true);
+            }
+        }
+
+        private bool CanGetUp()
+        {
+            return Physics2D.OverlapBox(transform.position + attributes.colliderBounds.center, attributes.colliderBounds.size - (Vector3.one * .001f), 0, contactFilter, overlapBuffer) == 0;
+        }
+
+        private void GetUp()
+        {
+            if (isCrouched && CanGetUp())
+            {
+                isCrouched = false;
+                animator.SetBool(anim_CrouchID, false);
             }
         }
         #endregion
@@ -646,6 +753,17 @@ namespace Nowhere
 
             if (isPlayable)
                 UpdateManager.Instance.Unregister((IInputUpdate)this);
+        }
+
+        private void OnDestroy()
+        {
+            PlayerCamera.Instance?.RemovePlayer();
+        }
+
+        protected override void Start()
+        {
+            base.Start();
+            PlayerCamera.Instance.SetPlayer(collider);
         }
         #endregion
 

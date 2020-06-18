@@ -67,7 +67,7 @@ namespace Nowhere
 
         // -----------------
 
-        private List<Collider2D> attackVictims = new List<Collider2D>();
+        protected List<Collider2D> attackVictims = new List<Collider2D>();
 
         private static Collider2D[] overlapBuffer = new Collider2D[6];
         private static int overlapBufferAmount = 0;
