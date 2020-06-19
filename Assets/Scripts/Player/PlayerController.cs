@@ -48,6 +48,7 @@ namespace Nowhere
                 if (value != isPlayable)
                 {
                     isPlayable = value;
+                    StopSlide();
 
                     // Manage input update registration.
                     if (value)
@@ -63,6 +64,7 @@ namespace Nowhere
 
         [SerializeField, ReadOnly] private bool isMoving =      false;
         [SerializeField, ReadOnly] private bool isJumping =     false;
+        [SerializeField, ReadOnly] private bool isDashing =     false;
         [SerializeField, ReadOnly] private bool isSliding =     false;
         [SerializeField, ReadOnly] private bool isCrouched =    false;
         [SerializeField, ReadOnly] private bool isAtJumpPeek =  false;
@@ -110,11 +112,21 @@ namespace Nowhere
                 PlayerCamera.Instance.SetFacingSide(Mathf.Sign(_movement));
             }
 
+            // Jump.
             if (Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.Joystick1Button0))
             {
                 if (!Jump())
                     jumpBufferVar = Time.time;
             }
+
+            // Dash.
+            if (Input.GetKeyDown(KeyCode.Q) || Input.GetKeyDown(KeyCode.Joystick1Button2))
+            {
+                Dash();
+                return;
+            }
+
+            // Slide & Crouch.
             if ((Input.GetKeyDown(KeyCode.C) || Input.GetKeyDown(KeyCode.Joystick1Button1)) &&
                 (Mathf.Abs(lastMovement + force.x) > attributes.SlideRequiredVelocity))
             {
@@ -251,7 +263,7 @@ namespace Nowhere
             else if (isAtJumpPeek)
                 AddGravity(.5f, 1);
 
-            else
+            else if (!isDashing)
                 base.PhysicsUpdate();
         }
         #endregion
@@ -363,7 +375,7 @@ namespace Nowhere
                 if (!_isMoving)
                     StopSlide();
             }
-                
+
             // Reset movement if not moving.
             if (!_isMoving && (speed > 0))
                 ResetMovement();
@@ -380,7 +392,20 @@ namespace Nowhere
                     if (castBuffer[_i].normal.y == -1)
                     {
                         StopJump();
-                        return;
+                        break;
+                    }
+                }
+            }
+
+            // Stop dash if needed.
+            if (isDashing)
+            {
+                for (int _i = 0; _i < castBufferCount; _i++)
+                {
+                    if (Mathf.Abs(castBuffer[_i].normal.x) == 1)
+                    {
+                        StopDash();
+                        break;
                     }
                 }
             }
@@ -627,6 +652,128 @@ namespace Nowhere
         }
         #endregion
 
+        #region Dash
+        private Coroutine dashCoroutine = null;
+
+        private void Dash()
+        {
+            if (wallStuckState == 0)
+            {
+                StopJump();
+                StopSlide();
+
+                dashCoroutine = StartCoroutine(DoDash());
+            }
+        }
+
+        private IEnumerator DoDash()
+        {
+            isDashing = true;
+            IsPlayable = false;
+
+            force.y = 0;
+            float _side = movement.x != 0 ? Mathf.Sign(movement.x) : facingSide;
+
+            float _boostDuration = attributes.DashDuration * (attributes.DashBoostPercent / 100f);
+            float _boostTransitDuration = attributes.DashDuration * (attributes.DashBoostTransitPercent / 100f);
+            float _breakDuration = attributes.DashDuration * (attributes.DashBreakPercent / 100f);
+            float _breakTransitDuration = attributes.DashDuration * (attributes.DashBreakTransitPercent / 100f);
+            float _normalDuration = attributes.DashDuration - (_boostDuration + _boostTransitDuration + _breakDuration + _breakTransitDuration);
+
+            int _step = 0;
+            float _time = 0;
+            float _speed = attributes.DashBoostSpeed;
+
+            yield return null;
+
+            bool _loop = true;
+            while (_loop)
+            {
+                switch (_step)
+                {
+                    case 0:
+                        if (_time > _boostDuration)
+                        {
+                            _time -= _boostDuration;
+                            AddInstantForce(new Vector2(_side * _speed * -(_time - Time.deltaTime), 0));
+
+                            _step = 1;
+                            continue;
+                        }
+                        break;
+
+                    case 1:
+                        _speed = Mathf.SmoothStep(attributes.DashBoostSpeed, attributes.DashNormalSpeed, _time / _boostTransitDuration);
+
+                        if (_time > _boostTransitDuration)
+                        {
+                            _time -= _boostTransitDuration;
+                            AddInstantForce(new Vector2(_side * _speed * -(_time - Time.deltaTime), 0));
+
+                            _step = 2;
+                            continue;
+                        }
+                        break;
+
+                    case 2:
+                        if (_time > _normalDuration)
+                        {
+                            _time -= _normalDuration;
+                            AddInstantForce(new Vector2(_side * _speed * -(_time - Time.deltaTime), 0));
+
+                            _step = 3;
+                            continue;
+                        }
+                        break;
+
+                    case 3:
+                        _speed = Mathf.SmoothStep(attributes.DashNormalSpeed, attributes.DashBreakSpeed, _time / _breakTransitDuration);
+
+                        if (_time > _breakTransitDuration)
+                        {
+                            _time -= _breakTransitDuration;
+                            AddInstantForce(new Vector2(_side * _speed * -(_time - Time.deltaTime), 0));
+
+                            _step = 4;
+                            continue;
+                        }
+                        break;
+
+                    case 4:
+                        if (_time > _breakDuration)
+                        {
+                            _time -= _breakDuration;
+                            AddInstantForce(new Vector2(_side * _speed * -(_time - Time.deltaTime), 0));
+
+                            _loop = false;
+                            continue;
+                        }
+                        break;
+                }
+
+                // Dash
+                AddInstantForce(new Vector2(_side * _speed * Time.deltaTime, 0));
+
+                yield return null;
+                _time += Time.deltaTime;
+            }
+
+            isDashing = false;
+            IsPlayable = true;
+        }
+
+        private void StopDash()
+        {
+            if (isDashing)
+            {
+                IsPlayable = true;
+                isDashing = false;
+                StopCoroutine(dashCoroutine);
+                dashCoroutine = null;
+            }
+        }
+        #endregion
+
         #region Slide
         private Coroutine slideCoroutine = null;
 
@@ -714,7 +861,7 @@ namespace Nowhere
         #endregion
 
         #region Crouch
-        public void Crouch()
+        private void Crouch()
         {
             if (!isCrouched)
             {
@@ -725,7 +872,7 @@ namespace Nowhere
 
         private bool CanGetUp()
         {
-            return Physics2D.OverlapBox(transform.position + attributes.colliderBounds.center, attributes.colliderBounds.size - (Vector3.one * .001f), 0, contactFilter, overlapBuffer) == 0;
+            return Physics2D.OverlapBox(transform.position + attributes.colliderBounds.center, attributes.colliderBounds.extents - (Vector3.one * .001f), 0, contactFilter, overlapBuffer) == 0;
         }
 
         private void GetUp()

@@ -61,9 +61,21 @@ namespace Nowhere
 
         [Min(0)] public float CrouchSpeedCoef = .75f;
 
-        [HorizontalLine(2, SuperColor.Chocolate)]
+        [HorizontalLine(1)]
 
         public Bounds colliderBounds = new Bounds();
+
+        [HorizontalLine(2, SuperColor.Chocolate)]
+
+        [Min(0)] public float DashDuration =    .5f;
+        [Min(0)] public float DashBoostSpeed =  25;
+        [Min(0)] public float DashNormalSpeed = 18;
+        [Min(0)] public float DashBreakSpeed =  7;
+
+        [Range(0, 100)] public int DashBoostPercent = 10;
+        [Range(0, 100)] public int DashBreakPercent = 25;
+        [Range(0, 100)] public int DashBoostTransitPercent = 2;
+        [Range(0, 100)] public int DashBreakTransitPercent = 2;
         #endregion
     }
 }

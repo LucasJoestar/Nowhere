@@ -252,8 +252,8 @@ namespace Nowhere
 
         // -----------------------
 
-        float previousXForce =       0;
-        float previousXVelocity =    0;
+        float previousXForce = 0;
+        float previousXVelocity = 0;
 
         protected virtual void ComputeVelocityBeforeMovement()
         {

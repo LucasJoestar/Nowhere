@@ -107,4 +107,4 @@ MonoBehaviour:
   CrouchSpeedCoef: 0.75
   colliderBounds:
     m_Center: {x: 0, y: 0.75, z: 0}
-    m_Extent: {x: 0.5, y: 0.75, z: 0}
+    m_Extent: {x: 1, y: 1.5, z: 0}
