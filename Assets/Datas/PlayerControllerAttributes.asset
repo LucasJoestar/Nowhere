@@ -108,3 +108,11 @@ MonoBehaviour:
   colliderBounds:
     m_Center: {x: 0, y: 0.75, z: 0}
     m_Extent: {x: 1, y: 1.5, z: 0}
+  DashDuration: 0.2
+  DashBoostSpeed: 45
+  DashNormalSpeed: 30
+  DashBreakSpeed: 5
+  DashBoostPercent: 10
+  DashBreakPercent: 25
+  DashBoostTransitPercent: 5
+  DashBreakTransitPercent: 5

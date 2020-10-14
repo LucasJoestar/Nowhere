@@ -50,7 +50,6 @@ namespace Nowhere
             {
                 #if UNITY_EDITOR
                 if (!Application.isPlaying) return;
-                isAwake = !value;
                 #endif
 
                 if (value != isAwake)
@@ -73,7 +72,6 @@ namespace Nowhere
             {
                 #if UNITY_EDITOR
                 if (!Application.isPlaying) return;
-                useGravity = !value;
                 #endif
 
                 if (value != useGravity)

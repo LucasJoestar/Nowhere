@@ -71,26 +71,6 @@ namespace Nowhere
             Time.timeScale = 1;
             sleepCoroutine = null;
         }
-
-        private IEnumerator Chronos()
-        {
-            while(true)
-            {
-                if (Input.GetKeyDown(KeyCode.Alpha0))
-                    Time.timeScale = 0;
-
-                if (Input.GetKeyDown(KeyCode.Alpha9))
-                    Time.timeScale = 1;
-
-                if (Input.GetKeyDown(KeyCode.Alpha8))
-                    Time.timeScale = .5f;
-
-                if (Input.GetKeyDown(KeyCode.Alpha7))
-                    Time.timeScale = .25f;
-
-                yield return null;
-            }
-        }
         #endregion
 
         #region Monobehaviour
@@ -101,8 +81,13 @@ namespace Nowhere
                 Instance = this;
             else
                 Destroy(gameObject);
+        }
 
-            StartCoroutine(Chronos());
+        private void Start()
+        {
+            #if !UNITY_EDITOR
+            UnityEngine.SceneManagement.SceneManager.LoadScene(1, UnityEngine.SceneManagement.LoadSceneMode.Additive);
+            #endif
         }
 
         private void OnApplicationQuit()

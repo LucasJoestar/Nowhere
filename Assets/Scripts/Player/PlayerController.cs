@@ -42,7 +42,6 @@ namespace Nowhere
             {
                 #if UNITY_EDITOR
                 if (!Application.isPlaying) return;
-                isPlayable = !value;
                 #endif
 
                 if (value != isPlayable)
@@ -150,6 +149,9 @@ namespace Nowhere
 
             if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.F))
                 AddForce(new Vector2(facingSide * 20, 0));
+
+            if (Input.GetKeyDown(KeyCode.R))
+                UnityEngine.SceneManagement.SceneManager.LoadScene(0, UnityEngine.SceneManagement.LoadSceneMode.Single);
         }
 
         private bool ConsumeJumpBuffer()
@@ -349,6 +351,15 @@ namespace Nowhere
                 CheckWallStatus();
 
             base.MovableUpdate();
+
+            if (isJumping)
+            {
+                // Code
+            }
+            if (isSliding)
+            {
+                // Code
+            }
         }
 
         // -----------------------
