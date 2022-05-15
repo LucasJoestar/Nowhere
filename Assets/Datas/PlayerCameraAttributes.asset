@@ -15,4 +15,9 @@ MonoBehaviour:
   TargetBounds:
     m_Center: {x: -3.5, y: 0, z: 0}
     m_Extent: {x: 3, y: 5, z: 0}
-  Speed: 0.09
+  Speed: 0.01
+  ShakeForce: 25
+  ShakeSoftening: 2.25
+  ShakeTraumaPower: 2
+  ShakeMaxAngle: 5
+  ShakeMaxOffset: {x: 1, y: 1}

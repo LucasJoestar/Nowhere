@@ -883,7 +883,7 @@ namespace Nowhere
 
         private bool CanGetUp()
         {
-            return Physics2D.OverlapBox(transform.position + attributes.colliderBounds.center, attributes.colliderBounds.extents - (Vector3.one * .001f), 0, contactFilter, overlapBuffer) == 0;
+            return Physics2D.OverlapCapsule(transform.position + attributes.colliderBounds.center, attributes.colliderBounds.extents - (Vector3.one * .001f), CapsuleDirection2D.Vertical, 0, contactFilter, overlapBuffer) == 0;
         }
 
         private void GetUp()
