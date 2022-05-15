@@ -17,7 +17,7 @@ namespace Nowhere
 
         public Bounds TargetBounds = new Bounds();
 
-        [Range(0, 1)] public float Speed = .1f;
+        [Range(0, 10)] public float Speed = .1f;
 
         [HorizontalLine(1)]
 

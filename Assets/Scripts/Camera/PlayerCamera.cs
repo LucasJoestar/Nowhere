@@ -101,7 +101,7 @@ namespace Nowhere
                 isMoving = true;
 
             // Move 10% closer to the target each frame.
-            _movement *= attributes.Speed;
+            _movement *= attributes.Speed * Time.deltaTime;
             transform.position = new Vector3(transform.position.x + _movement.x, transform.position.y + _movement.y, -10);
         }
 
